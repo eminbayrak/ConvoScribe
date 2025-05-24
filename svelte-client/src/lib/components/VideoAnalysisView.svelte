@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { marked } from 'marked';
+	import { marked } from '../markdown.js';
 
 	export let mode: 'summarizer' | 'explainer';
 	export let onAnalyze: (url: string, mode: 'summarizer' | 'explainer') => Promise<void>;
@@ -105,7 +105,10 @@
 							alt="Video thumbnail"
 							class="w-32 h-18 object-cover rounded-lg"
 							on:error={(e) => {
-								e.target.src = 'https://img.youtube.com/vi/' + videoId + '/hqdefault.jpg';
+								const target = e.target as HTMLImageElement;
+								if (target) {
+									target.src = 'https://img.youtube.com/vi/' + videoId + '/hqdefault.jpg';
+								}
 							}}
 						/>
 						<div class="flex-1">
@@ -189,6 +192,7 @@
 							on:click={() => navigator.clipboard.writeText(result)}
 							class="p-2 text-theme-muted hover:text-theme-secondary rounded-lg hover:bg-theme-secondary"
 							title="Copy to clipboard"
+							aria-label="Copy to clipboard"
 						>
 							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path

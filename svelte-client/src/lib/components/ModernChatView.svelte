@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { marked } from 'marked';
+	import { marked } from '../markdown.js';
 	import { onDestroy } from 'svelte';
 
 	interface Message {
@@ -14,7 +14,7 @@
 	let messageInput = '';
 	let chatContainer: HTMLElement;
 	let isUserScrolling = false;
-	let scrollTimeout: number;
+	let scrollTimeout: ReturnType<typeof setTimeout>;
 	let lastMessageCount = 0;
 
 	// Track if user is manually scrolling
@@ -262,6 +262,7 @@
 					<button
 						on:click={handleSend}
 						disabled={isLoading || !messageInput.trim()}
+						aria-label="Send message"
 						class="absolute right-2 bottom-2 p-2 text-theme-muted hover:text-theme-secondary disabled:opacity-50 disabled:cursor-not-allowed"
 					>
 						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
