@@ -54,9 +54,16 @@ export async function explainVideo(url: string): Promise<ApiResponse<{ explanati
     }
 }
 
-export async function sendChatMessage(message: string, images?: string[]): Promise<ApiResponse<{ reply: string; }>> {
+export async function sendChatMessage(
+    message: string,
+    images?: string[],
+    onChunk?: (chunk: string) => void
+): Promise<ApiResponse<{ reply: string; }>> {
     try {
-        const requestBody: { message: string; images?: string[]; } = { message };
+        const requestBody: { message: string; images?: string[]; stream?: boolean; } = {
+            message,
+            stream: !!onChunk  // Enable streaming if onChunk callback is provided
+        };
 
         // If images are provided, include them in the request
         if (images && images.length > 0) {
@@ -71,13 +78,55 @@ export async function sendChatMessage(message: string, images?: string[]): Promi
             body: JSON.stringify(requestBody),
         });
 
-        const data = await response.json();
-        if (response.ok) {
-            return { success: true, data: { reply: data.reply } };
-        } else {
-            return { success: false, error: data.error || 'Failed to get response' };
+        if (!response.ok) {
+            const errorData = await response.json();
+            return { success: false, error: errorData.error || 'Failed to get response' };
         }
-    } catch {
+
+        // Handle streaming response
+        if (onChunk && response.body) {
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let fullReply = '';
+
+            try {
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value, { stream: true });
+                    const lines = chunk.split('\n');
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.slice(6));
+                                if (data.chunk) {
+                                    fullReply += data.chunk;
+                                    onChunk(data.chunk);
+                                }
+                                if (data.done) {
+                                    return { success: true, data: { reply: fullReply } };
+                                }
+                            } catch {
+                                // Ignore JSON parse errors for malformed chunks
+                                console.warn('Failed to parse chunk:', line);
+                            }
+                        }
+                    }
+                }
+
+                return { success: true, data: { reply: fullReply } };
+            } finally {
+                reader.releaseLock();
+            }
+        } else {
+            // Handle non-streaming response
+            const data = await response.json();
+            return { success: true, data: { reply: data.reply } };
+        }
+    } catch (error) {
+        console.error('Chat API error:', error);
         return {
             success: false,
             error: 'Failed to connect to server. Please make sure the server is running.'

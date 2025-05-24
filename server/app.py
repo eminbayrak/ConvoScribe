@@ -104,22 +104,28 @@ def chat_with_model_endpoint():
     data = request.get_json()
     user_message = data.get('message')
     images = data.get('images', [])  # Get base64 encoded images
+    stream = data.get('stream', False)  # Add streaming support
 
     if not user_message and not images:
         return jsonify({"error": "Message or images are required"}), 400
 
     print(f"Received chat message: {user_message}", flush=True)
     print(f"Received {len(images)} images", flush=True)
+    print(f"Streaming requested: {stream}", flush=True)
 
     # Check if images are provided - use vision model
     if images:
-        return handle_image_chat(user_message, images)
+        return handle_image_chat(user_message, images, stream)
     else:
-        return handle_text_chat(user_message)
+        return handle_text_chat(user_message, stream)
 
 
-def handle_text_chat(user_message):
+def handle_text_chat(user_message, stream=False):
     """Handle text-only chat using Gemma3"""
+    from flask import Response, stream_template
+    import json
+    import time
+    
     ollama_api_url = "http://localhost:11434/api/generate"
     model_name = "gemma3:latest"
 
@@ -129,35 +135,67 @@ def handle_text_chat(user_message):
     payload = {
         "model": model_name,
         "prompt": prompt,
-        "stream": False
+        "stream": stream  # Use streaming based on request
     }
 
     try:
-        response = requests.post(ollama_api_url, json=payload, timeout=180)
-        print(
-            f"Ollama API response status code for chat: {response.status_code}", flush=True)
-        response_text_preview = response.text[:500] if response.text else ""
-        print(
-            f"Ollama API response text preview for chat: {response_text_preview}...", flush=True)
-
-        response.raise_for_status()
-
-        if not response.text or not response.text.strip():
-            print(
-                "Ollama API response for chat was empty. Returning generic error.", flush=True)
-            return jsonify({"error": "AI model returned an empty response."}), 500
-
-        response_data = response.json()
-        ai_reply = response_data.get("response")
-
-        if ai_reply:
-            print(
-                f"Successfully got chat reply from {model_name}.", flush=True)
-            return jsonify({"reply": ai_reply.strip()})
+        if stream:
+            # Handle streaming response
+            def generate_response():
+                response = requests.post(ollama_api_url, json=payload, stream=True, timeout=180)
+                response.raise_for_status()
+                
+                for line in response.iter_lines():
+                    if line:
+                        try:
+                            chunk_data = json.loads(line.decode('utf-8'))
+                            if 'response' in chunk_data:
+                                # Send each chunk as Server-Sent Events
+                                yield f"data: {json.dumps({'chunk': chunk_data['response']})}\n\n"
+                            
+                            # Check if this is the final chunk
+                            if chunk_data.get('done', False):
+                                yield f"data: {json.dumps({'done': True})}\n\n"
+                                break
+                        except json.JSONDecodeError:
+                            continue
+                            
+            return Response(
+                generate_response(),
+                mimetype='text/plain',
+                headers={
+                    'Cache-Control': 'no-cache',
+                    'Connection': 'keep-alive',
+                    'Access-Control-Allow-Origin': '*'
+                }
+            )
         else:
+            # Handle non-streaming response (existing logic)
+            response = requests.post(ollama_api_url, json=payload, timeout=180)
             print(
-                f"Ollama API chat response did not contain content. Response: {response_data}", flush=True)
-            return jsonify({"error": "AI model did not provide a reply."}), 500
+                f"Ollama API response status code for chat: {response.status_code}", flush=True)
+            response_text_preview = response.text[:500] if response.text else ""
+            print(
+                f"Ollama API response text preview for chat: {response_text_preview}...", flush=True)
+
+            response.raise_for_status()
+
+            if not response.text or not response.text.strip():
+                print(
+                    "Ollama API response for chat was empty. Returning generic error.", flush=True)
+                return jsonify({"error": "AI model returned an empty response."}), 500
+
+            response_data = response.json()
+            ai_reply = response_data.get("response")
+
+            if ai_reply:
+                print(
+                    f"Successfully got chat reply from {model_name}.", flush=True)
+                return jsonify({"reply": ai_reply.strip()})
+            else:
+                print(
+                    f"Ollama API chat response did not contain content. Response: {response_data}", flush=True)
+                return jsonify({"error": "AI model did not provide a reply."}), 500
 
     except requests.exceptions.Timeout:
         print("Ollama API chat request timed out.", flush=True)
@@ -175,12 +213,12 @@ def handle_text_chat(user_message):
         return jsonify({"error": "An unexpected error occurred while chatting with the AI."}), 500
 
 
-def handle_image_chat(user_message, images):
+def handle_image_chat(user_message, images, stream=False):
     """Handle image chat using LLaVA or OpenAI GPT-4 Vision"""
     
     # First, try to use LLaVA with Ollama for local processing
     try:
-        return handle_image_chat_with_llava(user_message, images)
+        return handle_image_chat_with_llava(user_message, images, stream)
     except Exception as llava_error:
         print(f"LLaVA failed: {llava_error}. Trying OpenAI GPT-4 Vision...", flush=True)
         
@@ -188,7 +226,7 @@ def handle_image_chat(user_message, images):
         openai_api_key = os.getenv('OPENAI_API_KEY')
         if openai_api_key:
             try:
-                return handle_image_chat_with_openai(user_message, images, openai_api_key)
+                return handle_image_chat_with_openai(user_message, images, openai_api_key, stream)
             except Exception as openai_error:
                 print(f"OpenAI GPT-4 Vision failed: {openai_error}", flush=True)
         
@@ -198,7 +236,7 @@ def handle_image_chat(user_message, images):
         }), 503
 
 
-def handle_image_chat_with_llava(user_message, images):
+def handle_image_chat_with_llava(user_message, images, stream=False):
     """Handle image chat using LLaVA model via Ollama"""
     ollama_api_url = "http://localhost:11434/api/generate"
     
@@ -220,19 +258,52 @@ def handle_image_chat_with_llava(user_message, images):
                     "model": model_name,
                     "prompt": prompt,
                     "images": [image_data],  # LLaVA expects base64 without prefix
-                    "stream": False
+                    "stream": stream
                 }
                 
                 print(f"Trying LLaVA model: {model_name}", flush=True)
-                response = requests.post(ollama_api_url, json=payload, timeout=300)
                 
-                if response.status_code == 200:
-                    response_data = response.json()
-                    ai_reply = response_data.get("response")
+                if stream:
+                    # Handle streaming for vision models
+                    from flask import Response
+                    import json
                     
-                    if ai_reply:
-                        print(f"Successfully got vision reply from {model_name}.", flush=True)
-                        return jsonify({"reply": ai_reply.strip()})
+                    def generate_vision_response():
+                        response = requests.post(ollama_api_url, json=payload, stream=True, timeout=300)
+                        response.raise_for_status()
+                        
+                        for line in response.iter_lines():
+                            if line:
+                                try:
+                                    chunk_data = json.loads(line.decode('utf-8'))
+                                    if 'response' in chunk_data:
+                                        yield f"data: {json.dumps({'chunk': chunk_data['response']})}\n\n"
+                                    
+                                    if chunk_data.get('done', False):
+                                        yield f"data: {json.dumps({'done': True})}\n\n"
+                                        break
+                                except json.JSONDecodeError:
+                                    continue
+                                    
+                    return Response(
+                        generate_vision_response(),
+                        mimetype='text/plain',
+                        headers={
+                            'Cache-Control': 'no-cache',
+                            'Connection': 'keep-alive',
+                            'Access-Control-Allow-Origin': '*'
+                        }
+                    )
+                else:
+                    response = requests.post(ollama_api_url, json=payload, timeout=300)
+                    
+                    if response.status_code == 200:
+                        response_data = response.json()
+                        ai_reply = response_data.get("response")
+                        
+                        if ai_reply:
+                            print(f"Successfully got vision reply from {model_name}.", flush=True)
+                            return jsonify({"reply": ai_reply.strip()})
                         
         except Exception as e:
             print(f"Failed to use {model_name}: {e}", flush=True)
@@ -242,7 +313,7 @@ def handle_image_chat_with_llava(user_message, images):
     raise Exception("No LLaVA model available")
 
 
-def handle_image_chat_with_openai(user_message, images, api_key):
+def handle_image_chat_with_openai(user_message, images, api_key, stream=False):
     """Handle image chat using OpenAI GPT-4 Vision"""
     from openai import OpenAI
     
@@ -273,18 +344,48 @@ def handle_image_chat_with_openai(user_message, images, api_key):
         })
     
     try:
-        response = client.chat.completions.create(
-            model="gpt-4-vision-preview",
-            messages=messages,
-            max_tokens=1000
-        )
-        
-        ai_reply = response.choices[0].message.content
-        if ai_reply:
-            print("Successfully got vision reply from OpenAI GPT-4 Vision.", flush=True)
-            return jsonify({"reply": ai_reply.strip()})
+        if stream:
+            # Handle streaming for OpenAI
+            from flask import Response
+            import json
+            
+            def generate_openai_response():
+                response = client.chat.completions.create(
+                    model="gpt-4-vision-preview",
+                    messages=messages,
+                    max_tokens=1000,
+                    stream=True
+                )
+                
+                for chunk in response:
+                    if chunk.choices[0].delta.content is not None:
+                        content = chunk.choices[0].delta.content
+                        yield f"data: {json.dumps({'chunk': content})}\n\n"
+                
+                yield f"data: {json.dumps({'done': True})}\n\n"
+                        
+            return Response(
+                generate_openai_response(),
+                mimetype='text/plain',
+                headers={
+                    'Cache-Control': 'no-cache',
+                    'Connection': 'keep-alive',
+                    'Access-Control-Allow-Origin': '*'
+                }
+            )
         else:
-            return jsonify({"error": "OpenAI returned an empty response."}), 500
+            response = client.chat.completions.create(
+                model="gpt-4-vision-preview",
+                messages=messages,
+                max_tokens=1000
+            )
+            
+            ai_reply = response.choices[0].message.content
+            if ai_reply:
+                print("Successfully got vision reply from OpenAI GPT-4 Vision.", flush=True)
+                return jsonify({"reply": ai_reply.strip()})
+            else:
+                return jsonify({"error": "OpenAI returned an empty response."}), 500
             
     except Exception as e:
         print(f"OpenAI GPT-4 Vision request failed: {e}", flush=True)

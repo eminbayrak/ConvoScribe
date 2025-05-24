@@ -1,16 +1,20 @@
 <script lang="ts">
 	import { marked } from '../markdown.js';
 	import { onDestroy } from 'svelte';
+
 	interface Message {
+		id: string;
 		type: 'user' | 'bot';
 		content: string;
 		timestamp: Date;
 		images?: string[]; // Base64 encoded images
+		isTyping?: boolean; // For typewriter effect
 	}
 
 	export let messages: Message[] = [];
 	export let onSendMessage: (message: string, images?: string[]) => void;
 	export let isLoading: boolean = false;
+
 	let messageInput = '';
 	let chatContainer: HTMLElement;
 	let isUserScrolling = false;
@@ -19,6 +23,20 @@
 	let fileInput: HTMLInputElement;
 	let uploadedImages: string[] = [];
 	let isDragOver = false;
+
+	// Typewriter effect variables
+	let typingMessageId: string | null = null;
+	let currentTypingContent: string = '';
+
+	// Track the currently typing message
+	$: typingMessage = messages.find((m) => m.isTyping);
+	$: if (typingMessage) {
+		typingMessageId = typingMessage.id;
+		currentTypingContent = typingMessage.content;
+	} else {
+		typingMessageId = null;
+		currentTypingContent = '';
+	}
 
 	// Track if user is manually scrolling
 	function handleScroll() {
@@ -36,7 +54,6 @@
 			}, 150);
 		}
 	}
-
 	// Only auto-scroll when messages are added and user isn't manually scrolling
 	$: if (messages && chatContainer && messages.length > lastMessageCount) {
 		lastMessageCount = messages.length;
@@ -55,6 +72,21 @@
 				}
 			}, 50);
 		}
+	}
+
+	// Auto-scroll during typewriter effect
+	$: if (currentTypingContent && chatContainer && !isUserScrolling) {
+		setTimeout(() => {
+			if (chatContainer && !isUserScrolling) {
+				const { scrollTop, scrollHeight, clientHeight } = chatContainer;
+				const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+
+				// Scroll to bottom during typing if user is near bottom
+				if (isNearBottom) {
+					chatContainer.scrollTop = chatContainer.scrollHeight;
+				}
+			}
+		}, 10);
 	}
 	function handleSend() {
 		if ((messageInput.trim() || uploadedImages.length > 0) && !isLoading) {
@@ -283,10 +315,14 @@
 										{/each}
 									</div>
 								{/if}
-
 								<div class="prose-themed prose-sm max-w-none">
 									{#if message.type === 'bot'}
-										{@html marked.parse(message.content)}
+										{#if message.isTyping && message.id === typingMessageId}
+											{@html marked.parse(currentTypingContent)}
+											<span class="animate-pulse">▋</span>
+										{:else}
+											{@html marked.parse(message.content)}
+										{/if}
 									{:else if message.content}
 										<p class="text-theme-secondary">{message.content}</p>
 									{/if}
@@ -301,8 +337,8 @@
 						</div>
 					</div>
 				{/each}
-				<!-- Loading indicator -->
-				{#if isLoading}
+				<!-- Loading indicator (only show when not streaming/typing) -->
+				{#if isLoading && !typingMessageId}
 					<div class="group relative px-4 py-6 bg-theme-secondary">
 						<div class="flex gap-4">
 							<div class="flex-shrink-0">

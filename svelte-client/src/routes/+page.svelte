@@ -11,10 +11,12 @@
 	let currentChatId = 'default';
 	let chatSessions = [{ id: 'default', title: 'New Chat', timestamp: new Date() }];
 	let chatMessages: Array<{
+		id: string;
 		type: 'user' | 'bot';
 		content: string;
 		timestamp: Date;
 		images?: string[];
+		isTyping?: boolean;
 	}> = [];
 	let isChatLoading = false;
 
@@ -53,9 +55,11 @@
 
 	async function handleSendMessage(message: string, images?: string[]) {
 		// Add user message
+		const userMessageId = `user-${Date.now()}`;
 		chatMessages = [
 			...chatMessages,
 			{
+				id: userMessageId,
 				type: 'user',
 				content: message,
 				timestamp: new Date(),
@@ -78,38 +82,67 @@
 
 		isChatLoading = true;
 
+		// Create a bot message for typing effect
+		const botMessageId = `bot-${Date.now()}`;
+		chatMessages = [
+			...chatMessages,
+			{
+				id: botMessageId,
+				type: 'bot',
+				content: '',
+				timestamp: new Date(),
+				isTyping: true
+			}
+		];
+
 		try {
-			// Send message with images to the API
-			const result = await sendChatMessage(message || "I've shared an image with you.", images);
+			let accumulatedContent = '';
+
+			// Send message with streaming enabled
+			const result = await sendChatMessage(
+				message || "I've shared an image with you.",
+				images,
+				(chunk: string) => {
+					// Handle each chunk for typewriter effect
+					accumulatedContent += chunk;
+
+					// Update the typing message content
+					chatMessages = chatMessages.map((msg) =>
+						msg.id === botMessageId ? { ...msg, content: accumulatedContent } : msg
+					);
+				}
+			);
 
 			if (result.success && result.data) {
-				chatMessages = [
-					...chatMessages,
-					{
-						type: 'bot',
-						content: result.data.reply,
-						timestamp: new Date()
-					}
-				];
+				// Finalize the message and remove typing indicator
+				chatMessages = chatMessages.map((msg) =>
+					msg.id === botMessageId
+						? { ...msg, content: result.data?.reply || '', isTyping: false }
+						: msg
+				);
 			} else {
-				chatMessages = [
-					...chatMessages,
-					{
-						type: 'bot',
-						content: `Sorry, I encountered an error: ${result.error || 'Unknown error'}`,
-						timestamp: new Date()
-					}
-				];
+				// Handle error
+				chatMessages = chatMessages.map((msg) =>
+					msg.id === botMessageId
+						? {
+								...msg,
+								content: `Sorry, I encountered an error: ${result.error || 'Unknown error'}`,
+								isTyping: false
+							}
+						: msg
+				);
 			}
 		} catch (error) {
-			chatMessages = [
-				...chatMessages,
-				{
-					type: 'bot',
-					content: 'Sorry, I encountered an unexpected error. Please try again.',
-					timestamp: new Date()
-				}
-			];
+			// Handle unexpected errors
+			chatMessages = chatMessages.map((msg) =>
+				msg.id === botMessageId
+					? {
+							...msg,
+							content: 'Sorry, I encountered an unexpected error. Please try again.',
+							isTyping: false
+						}
+					: msg
+			);
 		} finally {
 			isChatLoading = false;
 		}
@@ -124,7 +157,10 @@
 			const result = mode === 'summarizer' ? await summarizeVideo(url) : await explainVideo(url);
 
 			if (result.success && result.data) {
-				videoResult = result.data[mode === 'summarizer' ? 'summary' : 'explanation'];
+				videoResult =
+					mode === 'summarizer'
+						? (result.data as { summary: string }).summary
+						: (result.data as { explanation: string }).explanation;
 			} else {
 				videoError = result.error || 'Failed to analyze video';
 			}
