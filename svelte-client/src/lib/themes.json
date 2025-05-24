@@ -1,0 +1,118 @@
+{
+    "light": {
+        "name": "Light Theme",
+        "colors": {
+            "background": {
+                "primary": "#ffffff",
+                "secondary": "#f8fafc",
+                "tertiary": "#f1f5f9"
+            },
+            "text": {
+                "primary": "#0f172a",
+                "secondary": "#475569",
+                "tertiary": "#64748b",
+                "muted": "#94a3b8"
+            },
+            "border": {
+                "primary": "#e2e8f0",
+                "secondary": "#cbd5e1",
+                "focus": "#3b82f6"
+            },
+            "button": {
+                "primary": {
+                    "background": "#3b82f6",
+                    "hover": "#2563eb",
+                    "text": "#ffffff"
+                },
+                "secondary": {
+                    "background": "#f8fafc",
+                    "hover": "#f1f5f9",
+                    "text": "#475569"
+                },
+                "danger": {
+                    "background": "#ef4444",
+                    "hover": "#dc2626",
+                    "text": "#ffffff"
+                }
+            },
+            "sidebar": {
+                "background": "#1e293b",
+                "text": "#f8fafc",
+                "textMuted": "#94a3b8",
+                "hover": "#334155",
+                "active": "#475569",
+                "border": "#374151"
+            },
+            "chat": {
+                "userBubble": "#3b82f6",
+                "botBubble": "#10b981",
+                "userText": "#ffffff",
+                "botText": "#ffffff"
+            },
+            "status": {
+                "success": "#10b981",
+                "warning": "#f59e0b",
+                "error": "#ef4444",
+                "info": "#3b82f6"
+            }
+        }
+    },
+    "dark": {
+        "name": "Dark Theme (Catppuccin Mocha)",
+        "colors": {
+            "background": {
+                "primary": "#1e1e2e",
+                "secondary": "#181825",
+                "tertiary": "#11111b"
+            },
+            "text": {
+                "primary": "#cdd6f4",
+                "secondary": "#bac2de",
+                "tertiary": "#a6adc8",
+                "muted": "#6c7086"
+            },
+            "border": {
+                "primary": "#313244",
+                "secondary": "#45475a",
+                "focus": "#89b4fa"
+            },
+            "button": {
+                "primary": {
+                    "background": "#89b4fa",
+                    "hover": "#74c7ec",
+                    "text": "#1e1e2e"
+                },
+                "secondary": {
+                    "background": "#313244",
+                    "hover": "#45475a",
+                    "text": "#cdd6f4"
+                },
+                "danger": {
+                    "background": "#f38ba8",
+                    "hover": "#eba0ac",
+                    "text": "#1e1e2e"
+                }
+            },
+            "sidebar": {
+                "background": "#11111b",
+                "text": "#cdd6f4",
+                "textMuted": "#6c7086",
+                "hover": "#313244",
+                "active": "#45475a",
+                "border": "#313244"
+            },
+            "chat": {
+                "userBubble": "#89b4fa",
+                "botBubble": "#a6e3a1",
+                "userText": "#1e1e2e",
+                "botText": "#1e1e2e"
+            },
+            "status": {
+                "success": "#a6e3a1",
+                "warning": "#f9e2af",
+                "error": "#f38ba8",
+                "info": "#89b4fa"
+            }
+        }
+    }
+}

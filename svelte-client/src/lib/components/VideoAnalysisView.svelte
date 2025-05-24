@@ -32,14 +32,14 @@
 	$: thumbnailUrl = videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : null;
 </script>
 
-<div class="flex flex-col h-full bg-white">
+<div class="flex flex-col h-full bg-theme-primary">
 	<!-- Header -->
-	<div class="p-6 border-b border-gray-200">
+	<div class="p-6 border-b border-theme-primary">
 		<div class="max-w-4xl mx-auto">
-			<h1 class="text-2xl font-semibold text-gray-900 mb-2">
+			<h1 class="text-2xl font-semibold text-theme-primary mb-2">
 				{mode === 'summarizer' ? 'Video Summarizer' : 'Video Explainer'}
 			</h1>
-			<p class="text-gray-600">
+			<p class="text-theme-secondary">
 				{mode === 'summarizer'
 					? 'Get concise summaries of YouTube videos'
 					: 'Get detailed explanations of YouTube video content'}
@@ -51,8 +51,8 @@
 	<div class="flex-1 overflow-y-auto">
 		<div class="max-w-4xl mx-auto p-6">
 			<!-- URL Input Section -->
-			<div class="bg-white border border-gray-200 rounded-lg p-6 mb-6">
-				<label for="youtube-url" class="block text-sm font-medium text-gray-700 mb-3">
+			<div class="bg-theme-primary border border-theme-primary rounded-lg p-6 mb-6">
+				<label for="youtube-url" class="block text-sm font-medium text-theme-primary mb-3">
 					YouTube URL
 				</label>
 				<div class="flex gap-3">
@@ -63,12 +63,12 @@
 						on:keypress={handleKeypress}
 						placeholder="https://www.youtube.com/watch?v=..."
 						disabled={isLoading}
-						class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+						class="flex-1 px-4 py-3 border border-theme-primary rounded-lg focus:ring-2 focus:border-theme-focus focus:border-transparent disabled:opacity-50 bg-theme-primary text-theme-primary"
 					/>
 					<button
 						on:click={handleAnalyze}
 						disabled={isLoading || !youtubeUrl.trim()}
-						class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+						class="px-6 py-3 bg-btn-primary hover:bg-btn-primary focus:ring-2 focus:border-theme-focus disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium rounded-lg"
 					>
 						{#if isLoading}
 							<div class="flex items-center gap-2">
@@ -95,11 +95,10 @@
 					</button>
 				</div>
 			</div>
-
 			<!-- Video Preview -->
 			{#if thumbnailUrl && youtubeUrl.trim()}
-				<div class="bg-white border border-gray-200 rounded-lg p-6 mb-6">
-					<h3 class="text-lg font-medium text-gray-900 mb-4">Video Preview</h3>
+				<div class="bg-theme-primary border border-theme-primary rounded-lg p-6 mb-6">
+					<h3 class="text-lg font-medium text-theme-primary mb-4">Video Preview</h3>
 					<div class="flex gap-4">
 						<img
 							src={thumbnailUrl}
@@ -110,10 +109,10 @@
 							}}
 						/>
 						<div class="flex-1">
-							<p class="text-sm text-gray-600">Ready to analyze this video</p>
+							<p class="text-sm text-theme-secondary">Ready to analyze this video</p>
 							<div class="mt-2">
 								<span
-									class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
+									class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-status-success text-white"
 								>
 									Video detected
 								</span>
@@ -122,13 +121,12 @@
 					</div>
 				</div>
 			{/if}
-
 			<!-- Error Message -->
 			{#if error}
-				<div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+				<div class="bg-status-error border border-theme-primary rounded-lg p-4 mb-6">
 					<div class="flex items-start">
 						<svg
-							class="w-5 h-5 text-red-400 mt-0.5 mr-3"
+							class="w-5 h-5 text-white mt-0.5 mr-3"
 							fill="none"
 							stroke="currentColor"
 							viewBox="0 0 24 24"
@@ -141,8 +139,8 @@
 							/>
 						</svg>
 						<div>
-							<h3 class="text-sm font-medium text-red-800">Error</h3>
-							<p class="text-sm text-red-700 mt-1">{error}</p>
+							<h3 class="text-sm font-medium text-white">Error</h3>
+							<p class="text-sm text-white mt-1">{error}</p>
 						</div>
 					</div>
 				</div>
@@ -150,9 +148,9 @@
 
 			<!-- Loading State -->
 			{#if isLoading}
-				<div class="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+				<div class="bg-status-info border border-theme-primary rounded-lg p-6 mb-6">
 					<div class="flex items-center">
-						<svg class="w-5 h-5 text-blue-500 animate-spin mr-3" fill="none" viewBox="0 0 24 24">
+						<svg class="w-5 h-5 text-white animate-spin mr-3" fill="none" viewBox="0 0 24 24">
 							<circle
 								class="opacity-25"
 								cx="12"
@@ -168,10 +166,10 @@
 							></path>
 						</svg>
 						<div>
-							<h3 class="text-sm font-medium text-blue-800">
+							<h3 class="text-sm font-medium text-white">
 								{mode === 'summarizer' ? 'Generating Summary' : 'Creating Explanation'}
 							</h3>
-							<p class="text-sm text-blue-700">
+							<p class="text-sm text-white">
 								{mode === 'summarizer'
 									? 'Analyzing video content and creating a concise summary...'
 									: 'Analyzing video content and preparing a detailed explanation...'}
@@ -180,17 +178,16 @@
 					</div>
 				</div>
 			{/if}
-
 			<!-- Results -->
 			{#if result && !isLoading}
-				<div class="bg-white border border-gray-200 rounded-lg p-6">
+				<div class="bg-theme-primary border border-theme-primary rounded-lg p-6">
 					<div class="flex items-start justify-between mb-4">
-						<h3 class="text-lg font-medium text-gray-900">
+						<h3 class="text-lg font-medium text-theme-primary">
 							{mode === 'summarizer' ? 'Summary' : 'Detailed Explanation'}
 						</h3>
 						<button
 							on:click={() => navigator.clipboard.writeText(result)}
-							class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+							class="p-2 text-theme-muted hover:text-theme-secondary rounded-lg hover:bg-theme-secondary"
 							title="Copy to clipboard"
 						>
 							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -203,7 +200,7 @@
 							</svg>
 						</button>
 					</div>
-					<div class="prose prose-sm max-w-none text-gray-800">
+					<div class="prose-themed prose-sm max-w-none">
 						{@html marked.parse(result)}
 					</div>
 				</div>
@@ -211,33 +208,33 @@
 
 			<!-- Usage Tips -->
 			{#if !result && !isLoading && !error}
-				<div class="bg-gray-50 border border-gray-200 rounded-lg p-6">
-					<h3 class="text-lg font-medium text-gray-900 mb-4">How to use</h3>
+				<div class="bg-theme-secondary border border-theme-primary rounded-lg p-6">
+					<h3 class="text-lg font-medium text-theme-primary mb-4">How to use</h3>
 					<div class="space-y-3">
 						<div class="flex items-start gap-3">
 							<div
-								class="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
+								class="w-6 h-6 bg-btn-primary rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
 							>
-								<span class="text-xs font-medium text-blue-600">1</span>
+								<span class="text-xs font-medium text-white">1</span>
 							</div>
 							<div>
-								<p class="font-medium text-gray-900">Paste YouTube URL</p>
-								<p class="text-sm text-gray-600">
+								<p class="font-medium text-theme-primary">Paste YouTube URL</p>
+								<p class="text-sm text-theme-secondary">
 									Copy and paste any YouTube video URL into the input field above
 								</p>
 							</div>
 						</div>
 						<div class="flex items-start gap-3">
 							<div
-								class="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
+								class="w-6 h-6 bg-btn-primary rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
 							>
-								<span class="text-xs font-medium text-blue-600">2</span>
+								<span class="text-xs font-medium text-white">2</span>
 							</div>
 							<div>
-								<p class="font-medium text-gray-900">
+								<p class="font-medium text-theme-primary">
 									Click {mode === 'summarizer' ? 'Summarize' : 'Explain'}
 								</p>
-								<p class="text-sm text-gray-600">
+								<p class="text-sm text-theme-secondary">
 									{mode === 'summarizer'
 										? 'Get a concise overview of the video content'
 										: 'Get detailed explanations with examples and context'}
@@ -246,13 +243,13 @@
 						</div>
 						<div class="flex items-start gap-3">
 							<div
-								class="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
+								class="w-6 h-6 bg-btn-primary rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
 							>
-								<span class="text-xs font-medium text-blue-600">3</span>
+								<span class="text-xs font-medium text-white">3</span>
 							</div>
 							<div>
-								<p class="font-medium text-gray-900">Review and copy</p>
-								<p class="text-sm text-gray-600">
+								<p class="font-medium text-theme-primary">Review and copy</p>
+								<p class="text-sm text-theme-secondary">
 									Read the AI-generated content and copy it if needed
 								</p>
 							</div>

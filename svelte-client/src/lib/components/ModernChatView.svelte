@@ -76,16 +76,16 @@
 	});
 </script>
 
-<div class="flex flex-col h-full bg-white">
+<div class="flex flex-col h-full bg-theme-primary">
 	<!-- Header -->
-	<div class="flex items-center justify-between p-4 border-b border-gray-200">
+	<div class="flex items-center justify-between p-4 border-b border-theme-primary">
 		<div>
-			<h1 class="text-xl font-semibold text-gray-900">Chat with AI</h1>
-			<p class="text-sm text-gray-500">Ask me anything or discuss video content</p>
+			<h1 class="text-xl font-semibold text-theme-primary">Chat with AI</h1>
+			<p class="text-sm text-theme-secondary">Ask me anything or discuss video content</p>
 		</div>
 		<div class="flex items-center gap-2">
-			<div class="w-2 h-2 bg-green-500 rounded-full"></div>
-			<span class="text-xs text-gray-500">Online</span>
+			<div class="w-2 h-2 bg-status-success rounded-full"></div>
+			<span class="text-xs text-theme-muted">Online</span>
 		</div>
 	</div>
 	<!-- Messages Container -->
@@ -93,8 +93,8 @@
 		{#if messages.length === 0}
 			<!-- Welcome Screen -->
 			<div class="flex flex-col items-center justify-center h-full p-8 text-center">
-				<div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-					<svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<div class="w-16 h-16 bg-btn-primary rounded-full flex items-center justify-center mb-4">
+					<svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path
 							stroke-linecap="round"
 							stroke-linejoin="round"
@@ -103,39 +103,39 @@
 						/>
 					</svg>
 				</div>
-				<h2 class="text-2xl font-semibold text-gray-900 mb-2">Start a conversation</h2>
-				<p class="text-gray-600 max-w-md">
+				<h2 class="text-2xl font-semibold text-theme-primary mb-2">Start a conversation</h2>
+				<p class="text-theme-secondary max-w-md">
 					I'm here to help you with questions, discuss video content, or just have a conversation.
 					What would you like to talk about?
 				</p>
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-8 max-w-2xl">
 					<button
 						on:click={() => (messageInput = 'What can you help me with?')}
-						class="p-4 text-left border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+						class="p-4 text-left border border-theme-primary rounded-lg hover:border-theme-secondary transition-colors"
 					>
-						<div class="font-medium text-gray-900">What can you help me with?</div>
-						<div class="text-sm text-gray-500">Learn about my capabilities</div>
+						<div class="font-medium text-theme-primary">What can you help me with?</div>
+						<div class="text-sm text-theme-muted">Learn about my capabilities</div>
 					</button>
 					<button
 						on:click={() => (messageInput = 'Explain a complex topic to me')}
-						class="p-4 text-left border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+						class="p-4 text-left border border-theme-primary rounded-lg hover:border-theme-secondary transition-colors"
 					>
-						<div class="font-medium text-gray-900">Explain a complex topic</div>
-						<div class="text-sm text-gray-500">Get detailed explanations</div>
+						<div class="font-medium text-theme-primary">Explain a complex topic</div>
+						<div class="text-sm text-theme-muted">Get detailed explanations</div>
 					</button>
 					<button
 						on:click={() => (messageInput = 'Help me understand a YouTube video')}
-						class="p-4 text-left border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+						class="p-4 text-left border border-theme-primary rounded-lg hover:border-theme-secondary transition-colors"
 					>
-						<div class="font-medium text-gray-900">Analyze video content</div>
-						<div class="text-sm text-gray-500">Discuss video transcripts</div>
+						<div class="font-medium text-theme-primary">Analyze video content</div>
+						<div class="text-sm text-theme-muted">Discuss video transcripts</div>
 					</button>
 					<button
 						on:click={() => (messageInput = 'What are some good learning strategies?')}
-						class="p-4 text-left border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+						class="p-4 text-left border border-theme-primary rounded-lg hover:border-theme-secondary transition-colors"
 					>
-						<div class="font-medium text-gray-900">Learning tips</div>
-						<div class="text-sm text-gray-500">Get study advice</div>
+						<div class="font-medium text-theme-primary">Learning tips</div>
+						<div class="text-sm text-theme-muted">Get study advice</div>
 					</button>
 				</div>
 			</div>
@@ -144,13 +144,15 @@
 			<div class="max-w-4xl mx-auto">
 				{#each messages as message}
 					<div
-						class="group relative px-4 py-6 {message.type === 'user' ? 'bg-white' : 'bg-gray-50'}"
+						class="group relative px-4 py-6 {message.type === 'user'
+							? 'bg-theme-primary'
+							: 'bg-theme-secondary'}"
 					>
 						<div class="flex gap-4">
 							<!-- Avatar -->
 							<div class="flex-shrink-0">
 								{#if message.type === 'user'}
-									<div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+									<div class="w-8 h-8 bg-chat-user rounded-full flex items-center justify-center">
 										<svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
 											<path
 												fill-rule="evenodd"
@@ -160,7 +162,7 @@
 										</svg>
 									</div>
 								{:else}
-									<div class="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
+									<div class="w-8 h-8 bg-chat-bot rounded-full flex items-center justify-center">
 										<svg
 											class="w-4 h-4 text-white"
 											fill="none"
@@ -177,20 +179,19 @@
 									</div>
 								{/if}
 							</div>
-
 							<!-- Message Content -->
 							<div class="flex-1 min-w-0">
-								<div class="font-medium text-sm text-gray-900 mb-1">
+								<div class="font-medium text-sm text-theme-primary mb-1">
 									{message.type === 'user' ? 'You' : 'ConvoScribe '}
 								</div>
-								<div class="prose prose-sm max-w-none text-gray-800">
+								<div class="prose-themed prose-sm max-w-none">
 									{#if message.type === 'bot'}
 										{@html marked.parse(message.content)}
 									{:else}
-										{message.content}
+										<p class="text-theme-secondary">{message.content}</p>
 									{/if}
 								</div>
-								<div class="text-xs text-gray-400 mt-2">
+								<div class="text-xs text-theme-muted mt-2">
 									{new Intl.DateTimeFormat('en-US', {
 										hour: '2-digit',
 										minute: '2-digit'
@@ -200,13 +201,12 @@
 						</div>
 					</div>
 				{/each}
-
 				<!-- Loading indicator -->
 				{#if isLoading}
-					<div class="group relative px-4 py-6 bg-gray-50">
+					<div class="group relative px-4 py-6 bg-theme-secondary">
 						<div class="flex gap-4">
 							<div class="flex-shrink-0">
-								<div class="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
+								<div class="w-8 h-8 bg-chat-bot rounded-full flex items-center justify-center">
 									<svg
 										class="w-4 h-4 text-white"
 										fill="none"
@@ -223,20 +223,20 @@
 								</div>
 							</div>
 							<div class="flex-1 min-w-0">
-								<div class="font-medium text-sm text-gray-900 mb-1">ConvoScribe</div>
+								<div class="font-medium text-sm text-theme-primary mb-1">ConvoScribe</div>
 								<div class="flex items-center gap-2">
 									<div class="flex gap-1">
-										<div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+										<div class="w-2 h-2 bg-theme-muted rounded-full animate-bounce"></div>
 										<div
-											class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+											class="w-2 h-2 bg-theme-muted rounded-full animate-bounce"
 											style="animation-delay: 0.1s"
 										></div>
 										<div
-											class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+											class="w-2 h-2 bg-theme-muted rounded-full animate-bounce"
 											style="animation-delay: 0.2s"
 										></div>
 									</div>
-									<span class="text-sm text-gray-500">AI is thinking...</span>
+									<span class="text-sm text-theme-muted">AI is thinking...</span>
 								</div>
 							</div>
 						</div>
@@ -245,9 +245,8 @@
 			</div>
 		{/if}
 	</div>
-
 	<!-- Input Area -->
-	<div class="border-t border-gray-200 bg-white">
+	<div class="border-t border-theme-primary bg-theme-primary">
 		<div class="max-w-4xl mx-auto p-4">
 			<div class="flex gap-3 items-end">
 				<div class="flex-1 relative">
@@ -257,13 +256,13 @@
 						placeholder="Send a message..."
 						disabled={isLoading}
 						rows="1"
-						class="w-full resize-none px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 bg-white"
+						class="w-full resize-none px-4 py-3 pr-12 border border-theme-primary rounded-lg focus:ring-2 focus:border-theme-focus focus:border-transparent disabled:opacity-50 bg-theme-primary text-theme-primary"
 						style="min-height: 44px; max-height: 120px;"
 					></textarea>
 					<button
 						on:click={handleSend}
 						disabled={isLoading || !messageInput.trim()}
-						class="absolute right-2 bottom-2 p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+						class="absolute right-2 bottom-2 p-2 text-theme-muted hover:text-theme-secondary disabled:opacity-50 disabled:cursor-not-allowed"
 					>
 						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path
@@ -276,7 +275,7 @@
 					</button>
 				</div>
 			</div>
-			<div class="text-xs text-gray-500 mt-2 text-center">
+			<div class="text-xs text-theme-muted mt-2 text-center">
 				ConvoScribe can make mistakes. Consider checking important information.
 			</div>
 		</div>
