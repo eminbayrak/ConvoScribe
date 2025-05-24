@@ -96,6 +96,74 @@ def summarize_with_api_llm(transcript_text, is_detailed_explanation=False):
     print(f"API LLM {action_type} not implemented yet.")
     return None
 
+# --- Helper Functions ---
+
+def build_conversation_prompt(conversation_history, current_message):
+    """
+    Build a conversation prompt that includes context from previous messages.
+    Limits the context to prevent token overflow.
+    """
+    # Limit conversation history to last 10 exchanges (20 messages) to manage token count
+    max_history_messages = 20
+    limited_history = conversation_history[-max_history_messages:] if len(conversation_history) > max_history_messages else conversation_history
+    
+    # Start with system context
+    prompt = "You are ConvoScribe, a helpful AI assistant. You have context awareness and can reference previous parts of our conversation.\n\n"
+    
+    # Add conversation history
+    for msg in limited_history:
+        role = "User" if msg.get('type') == 'user' else "Assistant"
+        content = msg.get('content', '').strip()
+        if content:  # Only add non-empty messages
+            prompt += f"{role}: {content}\n"
+    
+    # Add current message
+    prompt += f"User: {current_message}\nAssistant:"
+    
+    return prompt
+
+def build_vision_conversation_prompt(conversation_history, current_message):
+    """
+    Build a conversation prompt for vision models that includes context from previous messages.
+    """
+    # Limit conversation history to last 8 exchanges (16 messages) for vision models
+    max_history_messages = 16
+    limited_history = conversation_history[-max_history_messages:] if len(conversation_history) > max_history_messages else conversation_history
+    
+    # Start with system context for vision
+    prompt = "You are ConvoScribe, a helpful AI assistant with vision capabilities. You can see and analyze images. You have context awareness and can reference previous parts of our conversation.\n\n"
+    
+    # Add conversation history (excluding image content for brevity)
+    for msg in limited_history:
+        role = "User" if msg.get('type') == 'user' else "Assistant"
+        content = msg.get('content', '').strip()
+        if content and not content.startswith('data:image'):  # Skip image data but keep text
+            # Truncate very long messages
+            if len(content) > 200:
+                content = content[:200] + "..."
+            prompt += f"{role}: {content}\n"
+    
+    # Add current message
+    prompt += f"User: {current_message}"
+    
+    return prompt
+
+def handle_image_chat(user_message, images, stream=False, conversation_history=None):
+    """Handle image chat using LLaVA or OpenAI GPT-4 Vision with conversation context"""
+    if conversation_history is None:
+        conversation_history = []
+        
+    # Try LLaVA first, fallback to OpenAI if available
+    try:
+        return handle_image_chat_with_llava(user_message, images, stream, conversation_history)
+    except Exception as e:
+        print(f"LLaVA failed: {e}, trying OpenAI...", flush=True)
+        openai_api_key = os.getenv('OPENAI_API_KEY')
+        if openai_api_key:
+            return handle_image_chat_with_openai(user_message, images, openai_api_key, stream, conversation_history)
+        else:
+            return handle_image_chat_with_llava(user_message, images, stream, conversation_history)
+
 # --- API Endpoints ---
 
 
@@ -104,6 +172,7 @@ def chat_with_model_endpoint():
     data = request.get_json()
     user_message = data.get('message')
     images = data.get('images', [])  # Get base64 encoded images
+    conversation_history = data.get('conversation_history', [])  # Get conversation context
     stream = data.get('stream', False)  # Add streaming support
 
     if not user_message and not images:
@@ -111,26 +180,30 @@ def chat_with_model_endpoint():
 
     print(f"Received chat message: {user_message}", flush=True)
     print(f"Received {len(images)} images", flush=True)
+    print(f"Received conversation history with {len(conversation_history)} messages", flush=True)
     print(f"Streaming requested: {stream}", flush=True)
 
     # Check if images are provided - use vision model
     if images:
-        return handle_image_chat(user_message, images, stream)
+        return handle_image_chat(user_message, images, stream, conversation_history)
     else:
-        return handle_text_chat(user_message, stream)
+        return handle_text_chat(user_message, stream, conversation_history)
 
 
-def handle_text_chat(user_message, stream=False):
-    """Handle text-only chat using Gemma3"""
+def handle_text_chat(user_message, stream=False, conversation_history=None):
+    """Handle text-only chat using Gemma3 with conversation context"""
     from flask import Response, stream_template
     import json
     import time
     
+    if conversation_history is None:
+        conversation_history = []
+    
     ollama_api_url = "http://localhost:11434/api/generate"
     model_name = "gemma3:latest"
 
-    # More conversational prompt for chat
-    prompt = f"User: {user_message}\nAI:"
+    # Build conversation context with history
+    prompt = build_conversation_prompt(conversation_history, user_message)
 
     payload = {
         "model": model_name,
@@ -236,8 +309,11 @@ def handle_image_chat(user_message, images, stream=False):
         }), 503
 
 
-def handle_image_chat_with_llava(user_message, images, stream=False):
-    """Handle image chat using LLaVA model via Ollama"""
+def handle_image_chat_with_llava(user_message, images, stream=False, conversation_history=None):
+    """Handle image chat using LLaVA model via Ollama with conversation context"""
+    if conversation_history is None:
+        conversation_history = []
+        
     ollama_api_url = "http://localhost:11434/api/generate"
     
     # Try different LLaVA models that might be available
@@ -252,7 +328,11 @@ def handle_image_chat_with_llava(user_message, images, stream=False):
                 if image_data.startswith('data:image'):
                     image_data = image_data.split(',')[1]
                 
-                prompt = user_message if user_message else "What do you see in this image? Please describe it in detail."
+                # Build prompt with conversation context for vision
+                if user_message:
+                    prompt = build_vision_conversation_prompt(conversation_history, user_message)
+                else:
+                    prompt = build_vision_conversation_prompt(conversation_history, "What do you see in this image? Please describe it in detail.")
                 
                 payload = {
                     "model": model_name,
@@ -313,35 +393,62 @@ def handle_image_chat_with_llava(user_message, images, stream=False):
     raise Exception("No LLaVA model available")
 
 
-def handle_image_chat_with_openai(user_message, images, api_key, stream=False):
-    """Handle image chat using OpenAI GPT-4 Vision"""
+def handle_image_chat_with_openai(user_message, images, api_key, stream=False, conversation_history=None):
+    """Handle image chat using OpenAI GPT-4 Vision with conversation context"""
+    if conversation_history is None:
+        conversation_history = []
     from openai import OpenAI
     
     # Configure OpenAI client with the new v1 API
     client = OpenAI(api_key=api_key)
     
-    # Prepare the messages for OpenAI API
-    messages = [
-        {
-            "role": "user",
-            "content": [
-                {
-                    "type": "text",
-                    "text": user_message if user_message else "What do you see in this image? Please describe it in detail."
-                }
-            ]
-        }
-    ]
+    # Build messages with conversation context for OpenAI
+    messages = []
     
-    # Add images to the message
+    # Add system message
+    messages.append({
+        "role": "system",
+        "content": "You are ConvoScribe, a helpful AI assistant with vision capabilities. You can see and analyze images. You have context awareness and can reference previous parts of our conversation."
+    })
+    
+    # Add conversation history (limit to last 8 exchanges for API efficiency)
+    max_history_messages = 16
+    limited_history = conversation_history[-max_history_messages:] if len(conversation_history) > max_history_messages else conversation_history
+    
+    for msg in limited_history:
+        role = "user" if msg.get('type') == 'user' else "assistant"
+        content = msg.get('content', '').strip()
+        if content and not content.startswith('data:image'):  # Skip image data
+            # Truncate very long messages
+            if len(content) > 300:
+                content = content[:300] + "..."
+            messages.append({
+                "role": role,
+                "content": content
+            })
+    
+    # Prepare the current user message with images
+    current_message = {
+        "role": "user",
+        "content": [
+            {
+                "type": "text",
+                "text": user_message if user_message else "What do you see in this image? Please describe it in detail."
+            }
+        ]
+    }
+      # Add images to the current message
     for image_data in images[:4]:  # GPT-4 Vision supports up to 4 images
-        messages[0]["content"].append({
+        current_message["content"].append({
             "type": "image_url",
             "image_url": {
                 "url": image_data,  # GPT-4 Vision expects full data URL
                 "detail": "high"
             }
         })
+    
+    # Add the current message to messages
+    messages.append(current_message)
     
     try:
         if stream:

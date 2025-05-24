@@ -98,7 +98,15 @@
 		try {
 			let accumulatedContent = '';
 
-			// Send message with streaming enabled
+			// Prepare conversation history for context (exclude current typing message)
+			const conversationHistory = chatMessages
+				.filter((msg) => !msg.isTyping && msg.content.trim()) // Exclude typing messages and empty content
+				.map((msg) => ({
+					type: msg.type,
+					content: msg.content
+				}));
+
+			// Send message with streaming enabled and conversation history
 			const result = await sendChatMessage(
 				message || "I've shared an image with you.",
 				images,
@@ -110,7 +118,8 @@
 					chatMessages = chatMessages.map((msg) =>
 						msg.id === botMessageId ? { ...msg, content: accumulatedContent } : msg
 					);
-				}
+				},
+				conversationHistory // Pass conversation history for context
 			);
 
 			if (result.success && result.data) {

@@ -57,10 +57,16 @@ export async function explainVideo(url: string): Promise<ApiResponse<{ explanati
 export async function sendChatMessage(
     message: string,
     images?: string[],
-    onChunk?: (chunk: string) => void
+    onChunk?: (chunk: string) => void,
+    conversationHistory?: Array<{ type: string; content: string; }>
 ): Promise<ApiResponse<{ reply: string; }>> {
     try {
-        const requestBody: { message: string; images?: string[]; stream?: boolean; } = {
+        const requestBody: {
+            message: string;
+            images?: string[];
+            stream?: boolean;
+            conversation_history?: Array<{ type: string; content: string; }>;
+        } = {
             message,
             stream: !!onChunk  // Enable streaming if onChunk callback is provided
         };
@@ -68,6 +74,11 @@ export async function sendChatMessage(
         // If images are provided, include them in the request
         if (images && images.length > 0) {
             requestBody.images = images;
+        }
+
+        // If conversation history is provided, include it in the request
+        if (conversationHistory && conversationHistory.length > 0) {
+            requestBody.conversation_history = conversationHistory;
         }
 
         const response = await fetch(`${API_BASE}/chat`, {
