@@ -79,9 +79,8 @@
 		isChatLoading = true;
 
 		try {
-			// For now, we'll send a simple message. In a real implementation,
-			// you'd need to update your API to handle image data
-			const result = await sendChatMessage(message || "I've shared an image with you.");
+			// Send message with images to the API
+			const result = await sendChatMessage(message || "I've shared an image with you.", images);
 
 			if (result.success && result.data) {
 				chatMessages = [

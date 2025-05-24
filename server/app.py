@@ -103,12 +103,23 @@ def summarize_with_api_llm(transcript_text, is_detailed_explanation=False):
 def chat_with_model_endpoint():
     data = request.get_json()
     user_message = data.get('message')
+    images = data.get('images', [])  # Get base64 encoded images
 
-    if not user_message:
-        return jsonify({"error": "Message is required"}), 400
+    if not user_message and not images:
+        return jsonify({"error": "Message or images are required"}), 400
 
     print(f"Received chat message: {user_message}", flush=True)
+    print(f"Received {len(images)} images", flush=True)
 
+    # Check if images are provided - use vision model
+    if images:
+        return handle_image_chat(user_message, images)
+    else:
+        return handle_text_chat(user_message)
+
+
+def handle_text_chat(user_message):
+    """Handle text-only chat using Gemma3"""
     ollama_api_url = "http://localhost:11434/api/generate"
     model_name = "gemma3:latest"
 
@@ -162,6 +173,122 @@ def chat_with_model_endpoint():
         print(
             f"An unexpected error occurred during chat processing: {e}", flush=True)
         return jsonify({"error": "An unexpected error occurred while chatting with the AI."}), 500
+
+
+def handle_image_chat(user_message, images):
+    """Handle image chat using LLaVA or OpenAI GPT-4 Vision"""
+    
+    # First, try to use LLaVA with Ollama for local processing
+    try:
+        return handle_image_chat_with_llava(user_message, images)
+    except Exception as llava_error:
+        print(f"LLaVA failed: {llava_error}. Trying OpenAI GPT-4 Vision...", flush=True)
+        
+        # Fallback to OpenAI GPT-4 Vision if available
+        openai_api_key = os.getenv('OPENAI_API_KEY')
+        if openai_api_key:
+            try:
+                return handle_image_chat_with_openai(user_message, images, openai_api_key)
+            except Exception as openai_error:
+                print(f"OpenAI GPT-4 Vision failed: {openai_error}", flush=True)
+        
+        # If both fail, return error message
+        return jsonify({
+            "error": "Image analysis is not available. Please install LLaVA model in Ollama or configure OpenAI API key."
+        }), 503
+
+
+def handle_image_chat_with_llava(user_message, images):
+    """Handle image chat using LLaVA model via Ollama"""
+    ollama_api_url = "http://localhost:11434/api/generate"
+    
+    # Try different LLaVA models that might be available
+    llava_models = ["llava:latest", "llava:13b", "llava:7b", "llava-llama3:latest"]
+    
+    for model_name in llava_models:
+        try:
+            # Convert first base64 image to the format LLaVA expects
+            if images:
+                # Remove data:image/xxx;base64, prefix if present
+                image_data = images[0]
+                if image_data.startswith('data:image'):
+                    image_data = image_data.split(',')[1]
+                
+                prompt = user_message if user_message else "What do you see in this image? Please describe it in detail."
+                
+                payload = {
+                    "model": model_name,
+                    "prompt": prompt,
+                    "images": [image_data],  # LLaVA expects base64 without prefix
+                    "stream": False
+                }
+                
+                print(f"Trying LLaVA model: {model_name}", flush=True)
+                response = requests.post(ollama_api_url, json=payload, timeout=300)
+                
+                if response.status_code == 200:
+                    response_data = response.json()
+                    ai_reply = response_data.get("response")
+                    
+                    if ai_reply:
+                        print(f"Successfully got vision reply from {model_name}.", flush=True)
+                        return jsonify({"reply": ai_reply.strip()})
+                        
+        except Exception as e:
+            print(f"Failed to use {model_name}: {e}", flush=True)
+            continue
+    
+    # If no LLaVA model worked, raise exception to try OpenAI
+    raise Exception("No LLaVA model available")
+
+
+def handle_image_chat_with_openai(user_message, images, api_key):
+    """Handle image chat using OpenAI GPT-4 Vision"""
+    from openai import OpenAI
+    
+    # Configure OpenAI client with the new v1 API
+    client = OpenAI(api_key=api_key)
+    
+    # Prepare the messages for OpenAI API
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "text",
+                    "text": user_message if user_message else "What do you see in this image? Please describe it in detail."
+                }
+            ]
+        }
+    ]
+    
+    # Add images to the message
+    for image_data in images[:4]:  # GPT-4 Vision supports up to 4 images
+        messages[0]["content"].append({
+            "type": "image_url",
+            "image_url": {
+                "url": image_data,  # GPT-4 Vision expects full data URL
+                "detail": "high"
+            }
+        })
+    
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4-vision-preview",
+            messages=messages,
+            max_tokens=1000
+        )
+        
+        ai_reply = response.choices[0].message.content
+        if ai_reply:
+            print("Successfully got vision reply from OpenAI GPT-4 Vision.", flush=True)
+            return jsonify({"reply": ai_reply.strip()})
+        else:
+            return jsonify({"error": "OpenAI returned an empty response."}), 500
+            
+    except Exception as e:
+        print(f"OpenAI GPT-4 Vision request failed: {e}", flush=True)
+        raise e
 
 
 @app.route('/api/summarize', methods=['POST'])

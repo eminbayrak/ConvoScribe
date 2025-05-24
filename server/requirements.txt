@@ -3,4 +3,4 @@ flask-cors
 python-dotenv
 youtube-transcript-api
 requests # For making HTTP requests to Ollama
-# Add any other specific LLM client libraries here, e.g., openai
+openai>=1.0.0 # For OpenAI GPT-4 Vision API

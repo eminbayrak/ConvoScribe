@@ -54,14 +54,21 @@ export async function explainVideo(url: string): Promise<ApiResponse<{ explanati
     }
 }
 
-export async function sendChatMessage(message: string): Promise<ApiResponse<{ reply: string; }>> {
+export async function sendChatMessage(message: string, images?: string[]): Promise<ApiResponse<{ reply: string; }>> {
     try {
+        const requestBody: { message: string; images?: string[]; } = { message };
+
+        // If images are provided, include them in the request
+        if (images && images.length > 0) {
+            requestBody.images = images;
+        }
+
         const response = await fetch(`${API_BASE}/chat`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ message }),
+            body: JSON.stringify(requestBody),
         });
 
         const data = await response.json();
