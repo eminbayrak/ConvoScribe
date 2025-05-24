@@ -10,7 +10,12 @@
 	// Chat state
 	let currentChatId = 'default';
 	let chatSessions = [{ id: 'default', title: 'New Chat', timestamp: new Date() }];
-	let chatMessages: Array<{ type: 'user' | 'bot'; content: string; timestamp: Date }> = [];
+	let chatMessages: Array<{
+		type: 'user' | 'bot';
+		content: string;
+		timestamp: Date;
+		images?: string[];
+	}> = [];
 	let isChatLoading = false;
 
 	// Video analysis state
@@ -46,14 +51,15 @@
 		activeView = 'chat';
 	}
 
-	async function handleSendMessage(message: string) {
+	async function handleSendMessage(message: string, images?: string[]) {
 		// Add user message
 		chatMessages = [
 			...chatMessages,
 			{
 				type: 'user',
 				content: message,
-				timestamp: new Date()
+				timestamp: new Date(),
+				images: images
 			}
 		];
 
@@ -62,14 +68,20 @@
 			const sessionIndex = chatSessions.findIndex((s) => s.id === currentChatId);
 			if (sessionIndex !== -1) {
 				chatSessions[sessionIndex].title =
-					message.length > 30 ? message.substring(0, 30) + '...' : message;
+					message.length > 30
+						? message.substring(0, 30) + '...'
+						: images && images.length > 0
+							? 'Image conversation'
+							: 'New Chat';
 			}
 		}
 
 		isChatLoading = true;
 
 		try {
-			const result = await sendChatMessage(message);
+			// For now, we'll send a simple message. In a real implementation,
+			// you'd need to update your API to handle image data
+			const result = await sendChatMessage(message || "I've shared an image with you.");
 
 			if (result.success && result.data) {
 				chatMessages = [

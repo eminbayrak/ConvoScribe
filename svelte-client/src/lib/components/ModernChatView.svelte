@@ -1,21 +1,24 @@
 <script lang="ts">
 	import { marked } from '../markdown.js';
 	import { onDestroy } from 'svelte';
-
 	interface Message {
 		type: 'user' | 'bot';
 		content: string;
 		timestamp: Date;
+		images?: string[]; // Base64 encoded images
 	}
 
 	export let messages: Message[] = [];
-	export let onSendMessage: (message: string) => void;
+	export let onSendMessage: (message: string, images?: string[]) => void;
 	export let isLoading: boolean = false;
 	let messageInput = '';
 	let chatContainer: HTMLElement;
 	let isUserScrolling = false;
 	let scrollTimeout: ReturnType<typeof setTimeout>;
 	let lastMessageCount = 0;
+	let fileInput: HTMLInputElement;
+	let uploadedImages: string[] = [];
+	let isDragOver = false;
 
 	// Track if user is manually scrolling
 	function handleScroll() {
@@ -54,18 +57,98 @@
 		}
 	}
 	function handleSend() {
-		if (messageInput.trim() && !isLoading) {
-			onSendMessage(messageInput.trim());
+		if ((messageInput.trim() || uploadedImages.length > 0) && !isLoading) {
+			onSendMessage(messageInput.trim(), uploadedImages.length > 0 ? uploadedImages : undefined);
 			messageInput = '';
+			uploadedImages = [];
 			// Reset scrolling state and force scroll to bottom when user sends a message
 			isUserScrolling = false;
 		}
 	}
+
 	function handleKeypress(event: KeyboardEvent) {
 		if (event.key === 'Enter' && !event.shiftKey) {
 			event.preventDefault();
 			handleSend();
 		}
+	}
+
+	// Image handling functions
+	function handleFileSelect(event: Event) {
+		const target = event.target as HTMLInputElement;
+		if (target.files) {
+			Array.from(target.files).forEach((file) => {
+				if (file.type.startsWith('image/')) {
+					const reader = new FileReader();
+					reader.onload = (e) => {
+						if (e.target?.result) {
+							uploadedImages = [...uploadedImages, e.target.result as string];
+						}
+					};
+					reader.readAsDataURL(file);
+				}
+			});
+		}
+		// Reset the input
+		target.value = '';
+	}
+
+	function handlePaste(event: ClipboardEvent) {
+		const items = event.clipboardData?.items;
+		if (items) {
+			Array.from(items).forEach((item) => {
+				if (item.type.startsWith('image/')) {
+					const file = item.getAsFile();
+					if (file) {
+						const reader = new FileReader();
+						reader.onload = (e) => {
+							if (e.target?.result) {
+								uploadedImages = [...uploadedImages, e.target.result as string];
+							}
+						};
+						reader.readAsDataURL(file);
+					}
+				}
+			});
+		}
+	}
+
+	function handleDragOver(event: DragEvent) {
+		event.preventDefault();
+		isDragOver = true;
+	}
+
+	function handleDragLeave(event: DragEvent) {
+		event.preventDefault();
+		isDragOver = false;
+	}
+
+	function handleDrop(event: DragEvent) {
+		event.preventDefault();
+		isDragOver = false;
+
+		const files = event.dataTransfer?.files;
+		if (files) {
+			Array.from(files).forEach((file) => {
+				if (file.type.startsWith('image/')) {
+					const reader = new FileReader();
+					reader.onload = (e) => {
+						if (e.target?.result) {
+							uploadedImages = [...uploadedImages, e.target.result as string];
+						}
+					};
+					reader.readAsDataURL(file);
+				}
+			});
+		}
+	}
+
+	function removeImage(index: number) {
+		uploadedImages = uploadedImages.filter((_, i) => i !== index);
+	}
+
+	function openFileDialog() {
+		fileInput.click();
 	}
 
 	// Cleanup timeout on component destroy
@@ -184,10 +267,27 @@
 								<div class="font-medium text-sm text-theme-primary mb-1">
 									{message.type === 'user' ? 'You' : 'ConvoScribe '}
 								</div>
+
+								<!-- Display images if present -->
+								{#if message.images && message.images.length > 0}
+									<div class="mb-3 flex flex-wrap gap-2">
+										{#each message.images as image}
+											<div class="relative group">
+												<img
+													src={image}
+													alt="Uploaded image"
+													class="max-w-xs max-h-48 rounded-lg border border-theme-primary object-cover cursor-pointer hover:opacity-90 transition-opacity"
+													on:click={() => window.open(image, '_blank')}
+												/>
+											</div>
+										{/each}
+									</div>
+								{/if}
+
 								<div class="prose-themed prose-sm max-w-none">
 									{#if message.type === 'bot'}
 										{@html marked.parse(message.content)}
-									{:else}
+									{:else if message.content}
 										<p class="text-theme-secondary">{message.content}</p>
 									{/if}
 								</div>
@@ -248,20 +348,79 @@
 	<!-- Input Area -->
 	<div class="border-t border-theme-primary bg-theme-primary">
 		<div class="max-w-4xl mx-auto p-4">
-			<div class="flex gap-3 items-end">
+			<!-- Image Preview Area -->
+			{#if uploadedImages.length > 0}
+				<div class="mb-3 p-3 bg-theme-secondary rounded-lg border border-theme-primary">
+					<div class="flex items-center justify-between mb-2">
+						<span class="text-sm font-medium text-theme-primary">Attached Images</span>
+						<button
+							on:click={() => (uploadedImages = [])}
+							class="text-xs text-theme-muted hover:text-theme-secondary"
+						>
+							Clear all
+						</button>
+					</div>
+					<div class="flex flex-wrap gap-2">
+						{#each uploadedImages as image, index}
+							<div class="relative group">
+								<img
+									src={image}
+									alt="Preview"
+									class="w-16 h-16 object-cover rounded border border-theme-primary"
+								/>
+								<button
+									on:click={() => removeImage(index)}
+									class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+									aria-label="Remove image"
+								>
+									×
+								</button>
+							</div>
+						{/each}
+					</div>
+				</div>
+			{/if}
+
+			<!-- Input Container -->
+			<div
+				class="flex gap-3 items-end relative {isDragOver ? 'ring-2 ring-blue-400 rounded-lg' : ''}"
+				on:dragover={handleDragOver}
+				on:dragleave={handleDragLeave}
+				on:drop={handleDrop}
+			>
 				<div class="flex-1 relative">
 					<textarea
 						bind:value={messageInput}
 						on:keypress={handleKeypress}
-						placeholder="Send a message..."
+						on:paste={handlePaste}
+						placeholder="Send a message or paste/drop an image..."
 						disabled={isLoading}
 						rows="1"
-						class="w-full resize-none px-4 py-3 pr-12 border border-theme-primary rounded-lg focus:ring-2 focus:border-theme-focus focus:border-transparent disabled:opacity-50 bg-theme-primary text-theme-primary"
+						class="w-full resize-none px-12 py-3 pr-12 border border-theme-primary rounded-lg focus:ring-2 focus:border-theme-focus focus:border-transparent disabled:opacity-50 bg-theme-primary text-theme-primary"
 						style="min-height: 44px; max-height: 120px;"
 					></textarea>
+
+					<!-- Image Upload Button -->
+					<button
+						on:click={openFileDialog}
+						disabled={isLoading}
+						aria-label="Upload image"
+						class="absolute left-2 bottom-2 p-2 text-theme-muted hover:text-theme-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+					>
+						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+							/>
+						</svg>
+					</button>
+
+					<!-- Send Button -->
 					<button
 						on:click={handleSend}
-						disabled={isLoading || !messageInput.trim()}
+						disabled={isLoading || (!messageInput.trim() && uploadedImages.length === 0)}
 						aria-label="Send message"
 						class="absolute right-2 bottom-2 p-2 text-theme-muted hover:text-theme-secondary disabled:opacity-50 disabled:cursor-not-allowed"
 					>
@@ -276,6 +435,36 @@
 					</button>
 				</div>
 			</div>
+
+			<!-- Hidden File Input -->
+			<input
+				bind:this={fileInput}
+				type="file"
+				accept="image/*"
+				multiple
+				on:change={handleFileSelect}
+				class="hidden"
+			/>
+
+			<!-- Drag Overlay -->
+			{#if isDragOver}
+				<div
+					class="absolute inset-0 bg-blue-100 bg-opacity-50 border-2 border-dashed border-blue-400 rounded-lg flex items-center justify-center z-10"
+				>
+					<div class="text-blue-600 text-center">
+						<svg class="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+							/>
+						</svg>
+						<p class="font-medium">Drop images here</p>
+					</div>
+				</div>
+			{/if}
+
 			<div class="text-xs text-theme-muted mt-2 text-center">
 				ConvoScribe can make mistakes. Consider checking important information.
 			</div>

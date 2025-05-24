@@ -515,3 +515,64 @@
     color: #ea580c;
     /* Orange-red for variables in light mode */
 }
+
+/* Image Upload Styles */
+.image-preview {
+    position: relative;
+    transition: all 0.2s ease-in-out;
+}
+
+.image-preview:hover {
+    transform: scale(1.02);
+}
+
+.image-preview .remove-btn {
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+}
+
+.image-preview:hover .remove-btn {
+    opacity: 1;
+}
+
+/* Drag and Drop Styles */
+.drag-over {
+    background-color: rgba(59, 130, 246, 0.1);
+    border-color: rgb(59, 130, 246);
+    border-style: dashed;
+}
+
+/* Image container styling */
+.image-container {
+    position: relative;
+    display: inline-block;
+}
+
+.image-container img {
+    transition: opacity 0.2s ease-in-out;
+}
+
+.image-container:hover img {
+    opacity: 0.9;
+}
+
+/* Responsive image display */
+@media (max-width: 640px) {
+    .image-preview img {
+        max-width: 150px;
+        max-height: 120px;
+    }
+}
+
+/* Upload button animation */
+.upload-btn {
+    transition: all 0.2s ease-in-out;
+}
+
+.upload-btn:hover {
+    transform: translateY(-1px);
+}
+
+.upload-btn:active {
+    transform: translateY(0);
+}
