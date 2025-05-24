@@ -1,0 +1,6 @@
+Flask
+flask-cors
+python-dotenv
+youtube-transcript-api
+requests # For making HTTP requests to Ollama
+# Add any other specific LLM client libraries here, e.g., openai
