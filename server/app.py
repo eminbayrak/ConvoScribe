@@ -1,7 +1,8 @@
 import os
+import json
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
-from youtube_transcript_api import YouTubeTranscriptApi, NoTranscriptFound, TranscriptsDisabled
+from youtube_transcript_api._api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import TranscriptsDisabled, NoTranscriptFound, VideoUnavailable
 from dotenv import load_dotenv
 import requests
@@ -21,16 +22,44 @@ CORS(app)  # Enable CORS for all routes
 def summarize_with_local_llm(transcript_text, is_detailed_explanation=False):
     """
     Summarizes or explains text using a locally running Ollama model.
+    Uses different models: llama3.1:8b for explanations, gemma3:latest for summaries.
     """
     action_type = "explain in detail like a teacher" if is_detailed_explanation else "summarize concisely"
     print(f"Attempting to {action_type} with local Ollama LLM...")
-    ollama_api_url = "http://localhost:11434/api/generate"
-    model_name = "gemma3:latest"
 
+    # Get Ollama API URL from environment variable with fallback
+    ollama_api_url = os.getenv(
+        "OLLAMA_API_URL", "http://localhost:11434/api/generate")
+
+    # Use different models for different tasks
     if is_detailed_explanation:
-        prompt = f"Act as a teacher and explain the following transcript line by line, providing examples and detailed explanations for concepts discussed. Be thorough and clear:\n\n{transcript_text}"
+        model_name = "llama3.1:8b"  # More powerful model for detailed explanations
+        prompt = f"""You are an expert teacher. Provide a comprehensive, detailed explanation of the following video transcript. 
+
+Please structure your explanation as follows:
+1. **Main Topic Overview**: What is this video fundamentally about?
+2. **Key Concepts Explained**: Break down and explain the core concepts discussed
+3. **Detailed Analysis**: Go deeper into important points, providing examples and context
+4. **Technical Details**: Explain any technical terms, processes, or methodologies mentioned
+5. **Real-world Applications**: How do these concepts apply in practice?
+6. **Additional Context**: Provide background information that enhances understanding
+7. **Summary of Learning Points**: What are the key takeaways?
+
+Be thorough, educational, and clear in your explanations.
+
+Transcript to explain:
+{transcript_text}"""
     else:
-        prompt = f"Summarize the following transcript concisely:\n\n{transcript_text}"
+        model_name = "gemma3:latest"  # Efficient model for summaries
+        prompt = f"""Please provide a clear, concise summary of the following video transcript. Focus on:
+- Main points and key takeaways
+- Important facts or findings
+- Core message or conclusion
+
+Keep the summary informative but brief.
+
+Transcript to summarize:
+{transcript_text}"""
 
     payload = {
         "model": model_name,
@@ -98,6 +127,7 @@ def summarize_with_api_llm(transcript_text, is_detailed_explanation=False):
 
 # --- Helper Functions ---
 
+
 def build_conversation_prompt(conversation_history, current_message):
     """
     Build a conversation prompt that includes context from previous messages.
@@ -105,22 +135,24 @@ def build_conversation_prompt(conversation_history, current_message):
     """
     # Limit conversation history to last 10 exchanges (20 messages) to manage token count
     max_history_messages = 20
-    limited_history = conversation_history[-max_history_messages:] if len(conversation_history) > max_history_messages else conversation_history
-    
+    limited_history = conversation_history[-max_history_messages:] if len(
+        conversation_history) > max_history_messages else conversation_history
+
     # Start with system context
     prompt = "You are ConvoScribe, a helpful AI assistant. You have context awareness and can reference previous parts of our conversation.\n\n"
-    
+
     # Add conversation history
     for msg in limited_history:
         role = "User" if msg.get('type') == 'user' else "Assistant"
         content = msg.get('content', '').strip()
         if content:  # Only add non-empty messages
             prompt += f"{role}: {content}\n"
-    
+
     # Add current message
     prompt += f"User: {current_message}\nAssistant:"
-    
+
     return prompt
+
 
 def build_vision_conversation_prompt(conversation_history, current_message):
     """
@@ -128,31 +160,34 @@ def build_vision_conversation_prompt(conversation_history, current_message):
     """
     # Limit conversation history to last 8 exchanges (16 messages) for vision models
     max_history_messages = 16
-    limited_history = conversation_history[-max_history_messages:] if len(conversation_history) > max_history_messages else conversation_history
-    
+    limited_history = conversation_history[-max_history_messages:] if len(
+        conversation_history) > max_history_messages else conversation_history
+
     # Start with system context for vision
     prompt = "You are ConvoScribe, a helpful AI assistant with vision capabilities. You can see and analyze images. You have context awareness and can reference previous parts of our conversation.\n\n"
-    
+
     # Add conversation history (excluding image content for brevity)
     for msg in limited_history:
         role = "User" if msg.get('type') == 'user' else "Assistant"
         content = msg.get('content', '').strip()
-        if content and not content.startswith('data:image'):  # Skip image data but keep text
+        # Skip image data but keep text
+        if content and not content.startswith('data:image'):
             # Truncate very long messages
             if len(content) > 200:
                 content = content[:200] + "..."
             prompt += f"{role}: {content}\n"
-    
+
     # Add current message
     prompt += f"User: {current_message}"
-    
+
     return prompt
+
 
 def handle_image_chat(user_message, images, stream=False, conversation_history=None):
     """Handle image chat using LLaVA or OpenAI GPT-4 Vision with conversation context"""
     if conversation_history is None:
         conversation_history = []
-        
+
     # Try LLaVA first, fallback to OpenAI if available
     try:
         return handle_image_chat_with_llava(user_message, images, stream, conversation_history)
@@ -172,7 +207,8 @@ def chat_with_model_endpoint():
     data = request.get_json()
     user_message = data.get('message')
     images = data.get('images', [])  # Get base64 encoded images
-    conversation_history = data.get('conversation_history', [])  # Get conversation context
+    conversation_history = data.get(
+        'conversation_history', [])  # Get conversation context
     stream = data.get('stream', False)  # Add streaming support
 
     if not user_message and not images:
@@ -180,27 +216,29 @@ def chat_with_model_endpoint():
 
     print(f"Received chat message: {user_message}", flush=True)
     print(f"Received {len(images)} images", flush=True)
-    print(f"Received conversation history with {len(conversation_history)} messages", flush=True)
-    print(f"Streaming requested: {stream}", flush=True)
-
+    print(
+        f"Received conversation history with {len(conversation_history)} messages", flush=True)
     # Check if images are provided - use vision model
+    print(f"Streaming requested: {stream}", flush=True)
     if images:
-        return handle_image_chat(user_message, images, stream, conversation_history)
+        return handle_image_chat_with_llava(user_message, images, stream, conversation_history)
     else:
         return handle_text_chat(user_message, stream, conversation_history)
 
 
 def handle_text_chat(user_message, stream=False, conversation_history=None):
-    """Handle text-only chat using Gemma3 with conversation context"""
+    """Handle text-only chat using llama3.1:8b with conversation context"""
     from flask import Response, stream_template
     import json
     import time
-    
+
     if conversation_history is None:
         conversation_history = []
-    
-    ollama_api_url = "http://localhost:11434/api/generate"
-    model_name = "gemma3:latest"
+
+    # Get Ollama API URL from environment variable with fallback
+    ollama_api_url = os.getenv(
+        "OLLAMA_API_URL", "http://localhost:11434/api/generate")
+    model_name = "llama3.1:8b"  # Upgraded model for better chat quality
 
     # Build conversation context with history
     prompt = build_conversation_prompt(conversation_history, user_message)
@@ -215,9 +253,10 @@ def handle_text_chat(user_message, stream=False, conversation_history=None):
         if stream:
             # Handle streaming response
             def generate_response():
-                response = requests.post(ollama_api_url, json=payload, stream=True, timeout=180)
+                response = requests.post(
+                    ollama_api_url, json=payload, stream=True, timeout=180)
                 response.raise_for_status()
-                
+
                 for line in response.iter_lines():
                     if line:
                         try:
@@ -225,14 +264,14 @@ def handle_text_chat(user_message, stream=False, conversation_history=None):
                             if 'response' in chunk_data:
                                 # Send each chunk as Server-Sent Events
                                 yield f"data: {json.dumps({'chunk': chunk_data['response']})}\n\n"
-                            
+
                             # Check if this is the final chunk
                             if chunk_data.get('done', False):
                                 yield f"data: {json.dumps({'done': True})}\n\n"
                                 break
                         except json.JSONDecodeError:
                             continue
-                            
+
             return Response(
                 generate_response(),
                 mimetype='text/plain',
@@ -286,39 +325,17 @@ def handle_text_chat(user_message, stream=False, conversation_history=None):
         return jsonify({"error": "An unexpected error occurred while chatting with the AI."}), 500
 
 
-def handle_image_chat(user_message, images, stream=False):
-    """Handle image chat using LLaVA or OpenAI GPT-4 Vision"""
-    
-    # First, try to use LLaVA with Ollama for local processing
-    try:
-        return handle_image_chat_with_llava(user_message, images, stream)
-    except Exception as llava_error:
-        print(f"LLaVA failed: {llava_error}. Trying OpenAI GPT-4 Vision...", flush=True)
-        
-        # Fallback to OpenAI GPT-4 Vision if available
-        openai_api_key = os.getenv('OPENAI_API_KEY')
-        if openai_api_key:
-            try:
-                return handle_image_chat_with_openai(user_message, images, openai_api_key, stream)
-            except Exception as openai_error:
-                print(f"OpenAI GPT-4 Vision failed: {openai_error}", flush=True)
-        
-        # If both fail, return error message
-        return jsonify({
-            "error": "Image analysis is not available. Please install LLaVA model in Ollama or configure OpenAI API key."
-        }), 503
-
-
 def handle_image_chat_with_llava(user_message, images, stream=False, conversation_history=None):
     """Handle image chat using LLaVA model via Ollama with conversation context"""
     if conversation_history is None:
         conversation_history = []
-        
+
     ollama_api_url = "http://localhost:11434/api/generate"
-    
+
     # Try different LLaVA models that might be available
-    llava_models = ["llava:latest", "llava:13b", "llava:7b", "llava-llama3:latest"]
-    
+    llava_models = ["llava:latest", "llava:13b",
+                    "llava:7b", "llava-llama3:latest"]
+
     for model_name in llava_models:
         try:
             # Convert first base64 image to the format LLaVA expects
@@ -327,44 +344,49 @@ def handle_image_chat_with_llava(user_message, images, stream=False, conversatio
                 image_data = images[0]
                 if image_data.startswith('data:image'):
                     image_data = image_data.split(',')[1]
-                
+
                 # Build prompt with conversation context for vision
                 if user_message:
-                    prompt = build_vision_conversation_prompt(conversation_history, user_message)
+                    prompt = build_vision_conversation_prompt(
+                        conversation_history, user_message)
                 else:
-                    prompt = build_vision_conversation_prompt(conversation_history, "What do you see in this image? Please describe it in detail.")
-                
+                    prompt = build_vision_conversation_prompt(
+                        conversation_history, "What do you see in this image? Please describe it in detail.")
+
                 payload = {
                     "model": model_name,
                     "prompt": prompt,
-                    "images": [image_data],  # LLaVA expects base64 without prefix
+                    # LLaVA expects base64 without prefix
+                    "images": [image_data],
                     "stream": stream
                 }
-                
+
                 print(f"Trying LLaVA model: {model_name}", flush=True)
-                
+
                 if stream:
                     # Handle streaming for vision models
                     from flask import Response
                     import json
-                    
+
                     def generate_vision_response():
-                        response = requests.post(ollama_api_url, json=payload, stream=True, timeout=300)
+                        response = requests.post(
+                            ollama_api_url, json=payload, stream=True, timeout=300)
                         response.raise_for_status()
-                        
+
                         for line in response.iter_lines():
                             if line:
                                 try:
-                                    chunk_data = json.loads(line.decode('utf-8'))
+                                    chunk_data = json.loads(
+                                        line.decode('utf-8'))
                                     if 'response' in chunk_data:
                                         yield f"data: {json.dumps({'chunk': chunk_data['response']})}\n\n"
-                                    
+
                                     if chunk_data.get('done', False):
                                         yield f"data: {json.dumps({'done': True})}\n\n"
                                         break
                                 except json.JSONDecodeError:
                                     continue
-                                    
+
                     return Response(
                         generate_vision_response(),
                         mimetype='text/plain',
@@ -375,20 +397,22 @@ def handle_image_chat_with_llava(user_message, images, stream=False, conversatio
                         }
                     )
                 else:
-                    response = requests.post(ollama_api_url, json=payload, timeout=300)
-                    
+                    response = requests.post(
+                        ollama_api_url, json=payload, timeout=300)
+
                     if response.status_code == 200:
                         response_data = response.json()
                         ai_reply = response_data.get("response")
-                        
+
                         if ai_reply:
-                            print(f"Successfully got vision reply from {model_name}.", flush=True)
+                            print(
+                                f"Successfully got vision reply from {model_name}.", flush=True)
                             return jsonify({"reply": ai_reply.strip()})
-                        
+
         except Exception as e:
             print(f"Failed to use {model_name}: {e}", flush=True)
             continue
-    
+
     # If no LLaVA model worked, raise exception to try OpenAI
     raise Exception("No LLaVA model available")
 
@@ -398,23 +422,24 @@ def handle_image_chat_with_openai(user_message, images, api_key, stream=False, c
     if conversation_history is None:
         conversation_history = []
     from openai import OpenAI
-    
+
     # Configure OpenAI client with the new v1 API
     client = OpenAI(api_key=api_key)
-    
+
     # Build messages with conversation context for OpenAI
     messages = []
-    
+
     # Add system message
     messages.append({
         "role": "system",
         "content": "You are ConvoScribe, a helpful AI assistant with vision capabilities. You can see and analyze images. You have context awareness and can reference previous parts of our conversation."
     })
-    
+
     # Add conversation history (limit to last 8 exchanges for API efficiency)
     max_history_messages = 16
-    limited_history = conversation_history[-max_history_messages:] if len(conversation_history) > max_history_messages else conversation_history
-    
+    limited_history = conversation_history[-max_history_messages:] if len(
+        conversation_history) > max_history_messages else conversation_history
+
     for msg in limited_history:
         role = "user" if msg.get('type') == 'user' else "assistant"
         content = msg.get('content', '').strip()
@@ -426,7 +451,7 @@ def handle_image_chat_with_openai(user_message, images, api_key, stream=False, c
                 "role": role,
                 "content": content
             })
-    
+
     # Prepare the current user message with images
     current_message = {
         "role": "user",
@@ -437,7 +462,7 @@ def handle_image_chat_with_openai(user_message, images, api_key, stream=False, c
             }
         ]
     }
-      # Add images to the current message
+    # Add images to the current message
     for image_data in images[:4]:  # GPT-4 Vision supports up to 4 images
         current_message["content"].append({
             "type": "image_url",
@@ -446,16 +471,16 @@ def handle_image_chat_with_openai(user_message, images, api_key, stream=False, c
                 "detail": "high"
             }
         })
-    
+
     # Add the current message to messages
     messages.append(current_message)
-    
+
     try:
         if stream:
             # Handle streaming for OpenAI
             from flask import Response
             import json
-            
+
             def generate_openai_response():
                 response = client.chat.completions.create(
                     model="gpt-4-vision-preview",
@@ -463,14 +488,14 @@ def handle_image_chat_with_openai(user_message, images, api_key, stream=False, c
                     max_tokens=1000,
                     stream=True
                 )
-                
+
                 for chunk in response:
                     if chunk.choices[0].delta.content is not None:
                         content = chunk.choices[0].delta.content
                         yield f"data: {json.dumps({'chunk': content})}\n\n"
-                
+
                 yield f"data: {json.dumps({'done': True})}\n\n"
-                        
+
             return Response(
                 generate_openai_response(),
                 mimetype='text/plain',
@@ -486,14 +511,15 @@ def handle_image_chat_with_openai(user_message, images, api_key, stream=False, c
                 messages=messages,
                 max_tokens=1000
             )
-            
+
             ai_reply = response.choices[0].message.content
             if ai_reply:
-                print("Successfully got vision reply from OpenAI GPT-4 Vision.", flush=True)
+                print(
+                    "Successfully got vision reply from OpenAI GPT-4 Vision.", flush=True)
                 return jsonify({"reply": ai_reply.strip()})
             else:
                 return jsonify({"error": "OpenAI returned an empty response."}), 500
-            
+
     except Exception as e:
         print(f"OpenAI GPT-4 Vision request failed: {e}", flush=True)
         raise e
@@ -586,12 +612,16 @@ def handle_transcript_processing(current_request, is_detailed_explanation):
 
 @app.route('/')
 def serve_index():
-    return send_from_directory(app.static_folder, 'index.html')
+    if app.static_folder:
+        return send_from_directory(app.static_folder, 'index.html')
+    return "Static folder not configured", 500
 
 
 @app.route('/<path:path>')
 def serve_static_files(path):
-    return send_from_directory(app.static_folder, path)
+    if app.static_folder:
+        return send_from_directory(app.static_folder, path)
+    return "Static folder not configured", 500
 
 
 if __name__ == '__main__':
