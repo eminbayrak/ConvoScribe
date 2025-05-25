@@ -105,34 +105,6 @@
 				</div>
 			{/if}
 
-			<!-- Loading State -->
-			{#if isLoading}
-				<div class="bg-status-info bg-opacity-10 border border-status-info rounded-lg p-4 mb-6">
-					<div class="flex items-center">
-						<svg class="w-5 h-5 text-status-info animate-spin mr-3" fill="none" viewBox="0 0 24 24">
-							<circle
-								class="opacity-25"
-								cx="12"
-								cy="12"
-								r="10"
-								stroke="currentColor"
-								stroke-width="4"
-							></circle>
-							<path
-								class="opacity-75"
-								fill="currentColor"
-								d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-							></path>
-						</svg>
-						<div>
-							<h3 class="text-sm font-medium text-status-info">
-								{mode === 'summarizer' ? 'Generating Summary' : 'Creating Explanation'}
-							</h3>
-						</div>
-					</div>
-				</div>
-			{/if}
-
 			<!-- Video Preview -->
 			{#if videoId && thumbnailUrl}
 				<div class="mb-6">

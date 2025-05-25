@@ -163,35 +163,76 @@
 		}
 	}
 	async function handleVideoAnalysis(url: string, mode: 'summarizer' | 'explainer') {
-		// Get the appropriate state object
-		const state = mode === 'summarizer' ? summarizerState : explainerState;
-
-		state.isLoading = true;
-		state.error = '';
-		state.result = '';
+		// Update the appropriate state object and trigger reactivity
+		if (mode === 'summarizer') {
+			summarizerState = {
+				...summarizerState,
+				isLoading: true,
+				error: '',
+				result: ''
+			};
+		} else {
+			explainerState = {
+				...explainerState,
+				isLoading: true,
+				error: '',
+				result: ''
+			};
+		}
 
 		try {
 			const result = mode === 'summarizer' ? await summarizeVideo(url) : await explainVideo(url);
 
 			if (result.success && result.data) {
-				state.result =
+				const resultText =
 					mode === 'summarizer'
 						? (result.data as { summary: string }).summary
 						: (result.data as { explanation: string }).explanation;
+
+				if (mode === 'summarizer') {
+					summarizerState = {
+						...summarizerState,
+						result: resultText,
+						isLoading: false
+					};
+				} else {
+					explainerState = {
+						...explainerState,
+						result: resultText,
+						isLoading: false
+					};
+				}
 			} else {
-				state.error = result.error || 'Failed to analyze video';
+				const errorText = result.error || 'Failed to analyze video';
+				if (mode === 'summarizer') {
+					summarizerState = {
+						...summarizerState,
+						error: errorText,
+						isLoading: false
+					};
+				} else {
+					explainerState = {
+						...explainerState,
+						error: errorText,
+						isLoading: false
+					};
+				}
 			}
 		} catch (error) {
-			state.error = 'An unexpected error occurred while analyzing the video';
-		} finally {
-			state.isLoading = false;
-		}
-
-		// Trigger reactivity by reassigning the state objects
-		if (mode === 'summarizer') {
-			summarizerState = { ...summarizerState };
-		} else {
-			explainerState = { ...explainerState };
+			const errorText = 'An unexpected error occurred while analyzing the video';
+			if (mode === 'summarizer') {
+				summarizerState = {
+					...summarizerState,
+					error: errorText,
+					isLoading: false
+				};
+			} else {
+				explainerState = {
+					...explainerState,
+					error: errorText,
+					isLoading: false
+				};
+			}
 		}
 	}
 </script>
