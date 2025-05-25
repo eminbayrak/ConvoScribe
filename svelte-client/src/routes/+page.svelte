@@ -26,12 +26,14 @@
 	let videoError = '';
 
 	function handleViewChange(view: 'chat' | 'summarizer' | 'explainer') {
+		console.log('handleViewChange called with:', view);
 		activeView = view;
 		// Clear any errors when switching views
 		videoError = '';
 	}
 
 	function handleNewChat() {
+		console.log('handleNewChat called');
 		const newChatId = `chat-${Date.now()}`;
 		const newSession = {
 			id: newChatId,
@@ -181,7 +183,7 @@
 	}
 </script>
 
-<div class="flex h-screen bg-gray-100">
+<div class="flex h-screen bg-white">
 	<!-- Sidebar -->
 	<Sidebar
 		{activeView}
@@ -193,7 +195,7 @@
 	/>
 
 	<!-- Main Content -->
-	<div class="flex-1 h-screen overflow-hidden">
+	<div class="flex-1 h-screen overflow-hidden bg-white">
 		{#if activeView === 'chat'}
 			<ModernChatView
 				messages={chatMessages}

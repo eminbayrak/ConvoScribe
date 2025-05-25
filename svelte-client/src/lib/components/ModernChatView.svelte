@@ -192,24 +192,15 @@
 </script>
 
 <div class="flex flex-col h-full bg-theme-primary">
-	<!-- Header -->
-	<div class="flex items-center justify-between p-4 border-b border-theme-primary">
-		<div>
-			<h1 class="text-xl font-semibold text-theme-primary">Chat with AI</h1>
-			<p class="text-sm text-theme-secondary">Ask me anything or discuss video content</p>
-		</div>
-		<div class="flex items-center gap-2">
-			<div class="w-2 h-2 bg-status-success rounded-full"></div>
-			<span class="text-xs text-theme-muted">Online</span>
-		</div>
-	</div>
 	<!-- Messages Container -->
 	<div bind:this={chatContainer} on:scroll={handleScroll} class="flex-1 overflow-y-auto">
 		{#if messages.length === 0}
 			<!-- Welcome Screen -->
-			<div class="flex flex-col items-center justify-center h-full p-8 text-center">
-				<div class="w-16 h-16 bg-btn-primary rounded-full flex items-center justify-center mb-4">
-					<svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+			<div
+				class="flex flex-col items-center justify-center h-full p-8 text-center max-w-2xl mx-auto"
+			>
+				<div class="w-12 h-12 bg-btn-primary rounded-full flex items-center justify-center mb-6">
+					<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path
 							stroke-linecap="round"
 							stroke-linejoin="round"
@@ -218,56 +209,21 @@
 						/>
 					</svg>
 				</div>
-				<h2 class="text-2xl font-semibold text-theme-primary mb-2">Start a conversation</h2>
-				<p class="text-theme-secondary max-w-md">
-					I'm here to help you with questions, discuss video content, or just have a conversation.
-					What would you like to talk about?
+				<h2 class="text-xl font-medium text-theme-primary mb-2">How can I help you today?</h2>
+				<p class="text-theme-muted mb-8">
+					I can help with questions, analyze video content, or have conversations about any topic.
 				</p>
-				<div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-8 max-w-2xl">
-					<button
-						on:click={() => (messageInput = 'What can you help me with?')}
-						class="p-4 text-left border border-theme-primary rounded-lg hover:border-theme-secondary transition-colors"
-					>
-						<div class="font-medium text-theme-primary">What can you help me with?</div>
-						<div class="text-sm text-theme-muted">Learn about my capabilities</div>
-					</button>
-					<button
-						on:click={() => (messageInput = 'Explain a complex topic to me')}
-						class="p-4 text-left border border-theme-primary rounded-lg hover:border-theme-secondary transition-colors"
-					>
-						<div class="font-medium text-theme-primary">Explain a complex topic</div>
-						<div class="text-sm text-theme-muted">Get detailed explanations</div>
-					</button>
-					<button
-						on:click={() => (messageInput = 'Help me understand a YouTube video')}
-						class="p-4 text-left border border-theme-primary rounded-lg hover:border-theme-secondary transition-colors"
-					>
-						<div class="font-medium text-theme-primary">Analyze video content</div>
-						<div class="text-sm text-theme-muted">Discuss video transcripts</div>
-					</button>
-					<button
-						on:click={() => (messageInput = 'What are some good learning strategies?')}
-						class="p-4 text-left border border-theme-primary rounded-lg hover:border-theme-secondary transition-colors"
-					>
-						<div class="font-medium text-theme-primary">Learning tips</div>
-						<div class="text-sm text-theme-muted">Get study advice</div>
-					</button>
-				</div>
 			</div>
 		{:else}
 			<!-- Messages -->
-			<div class="max-w-4xl mx-auto">
+			<div class="max-w-3xl mx-auto py-8">
 				{#each messages as message}
-					<div
-						class="group relative px-4 py-6 {message.type === 'user'
-							? 'bg-theme-primary'
-							: 'bg-theme-secondary'}"
-					>
+					<div class="group relative px-6 py-6 mb-4">
 						<div class="flex gap-4">
 							<!-- Avatar -->
-							<div class="flex-shrink-0">
+							<div class="flex-shrink-0 mt-1">
 								{#if message.type === 'user'}
-									<div class="w-8 h-8 bg-chat-user rounded-full flex items-center justify-center">
+									<div class="w-7 h-7 bg-chat-user rounded-sm flex items-center justify-center">
 										<svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
 											<path
 												fill-rule="evenodd"
@@ -277,7 +233,7 @@
 										</svg>
 									</div>
 								{:else}
-									<div class="w-8 h-8 bg-chat-bot rounded-full flex items-center justify-center">
+									<div class="w-7 h-7 bg-chat-bot rounded-sm flex items-center justify-center">
 										<svg
 											class="w-4 h-4 text-white"
 											fill="none"
@@ -296,26 +252,22 @@
 							</div>
 							<!-- Message Content -->
 							<div class="flex-1 min-w-0">
-								<div class="font-medium text-sm text-theme-primary mb-1">
-									{message.type === 'user' ? 'You' : 'ConvoScribe '}
-								</div>
-
 								<!-- Display images if present -->
 								{#if message.images && message.images.length > 0}
-									<div class="mb-3 flex flex-wrap gap-2">
+									<div class="mb-4 flex flex-wrap gap-3">
 										{#each message.images as image}
 											<div class="relative group">
 												<img
 													src={image}
 													alt="Uploaded image"
-													class="max-w-xs max-h-48 rounded-lg border border-theme-primary object-cover cursor-pointer hover:opacity-90 transition-opacity"
+													class="max-w-sm max-h-64 rounded-lg border border-theme-primary object-cover cursor-pointer hover:opacity-90 transition-opacity"
 													on:click={() => window.open(image, '_blank')}
 												/>
 											</div>
 										{/each}
 									</div>
 								{/if}
-								<div class="prose-themed prose-sm max-w-none">
+								<div class="prose prose-lg max-w-none text-theme-primary leading-relaxed">
 									{#if message.type === 'bot'}
 										{#if message.isTyping && message.id === typingMessageId}
 											{@html marked.parse(currentTypingContent)}
@@ -324,14 +276,8 @@
 											{@html marked.parse(message.content)}
 										{/if}
 									{:else if message.content}
-										<p class="text-theme-secondary">{message.content}</p>
+										<p class="text-theme-primary text-lg leading-relaxed">{message.content}</p>
 									{/if}
-								</div>
-								<div class="text-xs text-theme-muted mt-2">
-									{new Intl.DateTimeFormat('en-US', {
-										hour: '2-digit',
-										minute: '2-digit'
-									}).format(message.timestamp)}
 								</div>
 							</div>
 						</div>
@@ -339,10 +285,10 @@
 				{/each}
 				<!-- Loading indicator (only show when not streaming/typing) -->
 				{#if isLoading && !typingMessageId}
-					<div class="group relative px-4 py-6 bg-theme-secondary">
+					<div class="group relative px-6 py-6 mb-4">
 						<div class="flex gap-4">
-							<div class="flex-shrink-0">
-								<div class="w-8 h-8 bg-chat-bot rounded-full flex items-center justify-center">
+							<div class="flex-shrink-0 mt-1">
+								<div class="w-7 h-7 bg-chat-bot rounded-sm flex items-center justify-center">
 									<svg
 										class="w-4 h-4 text-white"
 										fill="none"
@@ -353,13 +299,12 @@
 											stroke-linecap="round"
 											stroke-linejoin="round"
 											stroke-width="2"
-											d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+											d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2 2v10a2 2 0 002 2z"
 										/>
 									</svg>
 								</div>
 							</div>
 							<div class="flex-1 min-w-0">
-								<div class="font-medium text-sm text-theme-primary mb-1">ConvoScribe</div>
 								<div class="flex items-center gap-2">
 									<div class="flex gap-1">
 										<div class="w-2 h-2 bg-theme-muted rounded-full animate-bounce"></div>
@@ -372,7 +317,6 @@
 											style="animation-delay: 0.2s"
 										></div>
 									</div>
-									<span class="text-sm text-theme-muted">AI is thinking...</span>
 								</div>
 							</div>
 						</div>
@@ -382,16 +326,16 @@
 		{/if}
 	</div>
 	<!-- Input Area -->
-	<div class="border-t border-theme-primary bg-theme-primary">
-		<div class="max-w-4xl mx-auto p-4">
+	<div class="p-4 bg-theme-primary">
+		<div class="max-w-3xl mx-auto">
 			<!-- Image Preview Area -->
 			{#if uploadedImages.length > 0}
-				<div class="mb-3 p-3 bg-theme-secondary rounded-lg border border-theme-primary">
+				<div class="mb-3 p-3 bg-theme-secondary rounded-xl border border-theme-primary">
 					<div class="flex items-center justify-between mb-2">
 						<span class="text-sm font-medium text-theme-primary">Attached Images</span>
 						<button
 							on:click={() => (uploadedImages = [])}
-							class="text-xs text-theme-muted hover:text-theme-secondary"
+							class="text-xs text-theme-secondary hover:text-theme-primary transition-colors"
 						>
 							Clear all
 						</button>
@@ -402,11 +346,11 @@
 								<img
 									src={image}
 									alt="Preview"
-									class="w-16 h-16 object-cover rounded border border-theme-primary"
+									class="w-20 h-20 object-cover rounded-lg border border-theme-primary"
 								/>
 								<button
 									on:click={() => removeImage(index)}
-									class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+									class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
 									aria-label="Remove image"
 								>
 									×
@@ -419,56 +363,67 @@
 
 			<!-- Input Container -->
 			<div
-				class="flex gap-3 items-end relative {isDragOver ? 'ring-2 ring-blue-400 rounded-lg' : ''}"
+				class="relative {isDragOver ? 'ring-2 ring-blue-400 rounded-3xl' : ''}"
 				on:dragover={handleDragOver}
 				on:dragleave={handleDragLeave}
 				on:drop={handleDrop}
 			>
-				<div class="flex-1 relative">
+				<div
+					class="relative bg-theme-secondary rounded-3xl shadow-sm focus-within:shadow-md transition-all duration-200"
+				>
 					<textarea
 						bind:value={messageInput}
 						on:keypress={handleKeypress}
 						on:paste={handlePaste}
-						placeholder="Send a message or paste/drop an image..."
+						placeholder="Message ConvoScribe..."
 						disabled={isLoading}
 						rows="1"
-						class="w-full resize-none px-12 py-3 pr-12 border border-theme-primary rounded-lg focus:ring-2 focus:border-theme-focus focus:border-transparent disabled:opacity-50 bg-theme-primary text-theme-primary"
-						style="min-height: 44px; max-height: 120px;"
+						class="w-full resize-none pl-4 pr-16 py-4 bg-transparent text-theme-primary placeholder-theme-muted border-0 focus:ring-0 focus:outline-none disabled:opacity-50 rounded-3xl"
+						style="min-height: 56px; max-height: 200px; line-height: 1.5;"
 					></textarea>
 
-					<!-- Image Upload Button -->
-					<button
-						on:click={openFileDialog}
-						disabled={isLoading}
-						aria-label="Upload image"
-						class="absolute left-2 bottom-2 p-2 text-theme-muted hover:text-theme-secondary disabled:opacity-50 disabled:cursor-not-allowed"
-					>
-						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-							/>
-						</svg>
-					</button>
+					<div class="absolute right-2 bottom-2 flex items-center gap-1">
+						<!-- Image Upload Button -->
+						<button
+							on:click={openFileDialog}
+							disabled={isLoading}
+							aria-label="Upload image"
+							class="p-2 text-theme-muted hover:text-theme-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors rounded-xl hover:bg-theme-tertiary"
+						>
+							<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="1.5"
+									d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+								/>
+							</svg>
+						</button>
 
-					<!-- Send Button -->
-					<button
-						on:click={handleSend}
-						disabled={isLoading || (!messageInput.trim() && uploadedImages.length === 0)}
-						aria-label="Send message"
-						class="absolute right-2 bottom-2 p-2 text-theme-muted hover:text-theme-secondary disabled:opacity-50 disabled:cursor-not-allowed"
-					>
-						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
+						<!-- Send Button -->
+						<button
+							on:click={handleSend}
+							disabled={isLoading || (!messageInput.trim() && uploadedImages.length === 0)}
+							aria-label="Send message"
+							class="w-8 h-8 {messageInput.trim() || uploadedImages.length > 0
+								? 'bg-btn-primary hover:bg-btn-primary'
+								: 'bg-theme-tertiary text-theme-muted'} rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center"
+						>
+							<svg
+								class="w-4 h-4"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
 								stroke-width="2"
-								d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-							/>
-						</svg>
-					</button>
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+								/>
+							</svg>
+						</button>
+					</div>
 				</div>
 			</div>
 
@@ -485,9 +440,9 @@
 			<!-- Drag Overlay -->
 			{#if isDragOver}
 				<div
-					class="absolute inset-0 bg-blue-100 bg-opacity-50 border-2 border-dashed border-blue-400 rounded-lg flex items-center justify-center z-10"
+					class="absolute inset-0 bg-status-info bg-opacity-10 border-2 border-dashed border-status-info rounded-3xl flex items-center justify-center z-10"
 				>
-					<div class="text-blue-600 text-center">
+					<div class="text-status-info text-center">
 						<svg class="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path
 								stroke-linecap="round"
@@ -500,10 +455,6 @@
 					</div>
 				</div>
 			{/if}
-
-			<div class="text-xs text-theme-muted mt-2 text-center">
-				ConvoScribe can make mistakes. Consider checking important information.
-			</div>
 		</div>
 	</div>
 </div>
