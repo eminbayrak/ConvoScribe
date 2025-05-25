@@ -19,17 +19,21 @@
 		isTyping?: boolean;
 	}> = [];
 	let isChatLoading = false;
-
-	// Video analysis state
-	let isVideoLoading = false;
-	let videoResult = '';
-	let videoError = '';
-
+	// Video analysis state - separate for each mode
+	let summarizerState = {
+		isLoading: false,
+		result: '',
+		error: ''
+	};
+	let explainerState = {
+		isLoading: false,
+		result: '',
+		error: ''
+	};
 	function handleViewChange(view: 'chat' | 'summarizer' | 'explainer') {
 		console.log('handleViewChange called with:', view);
 		activeView = view;
-		// Clear any errors when switching views
-		videoError = '';
+		// No need to clear errors when switching views since each view has its own state
 	}
 
 	function handleNewChat() {
@@ -158,27 +162,36 @@
 			isChatLoading = false;
 		}
 	}
-
 	async function handleVideoAnalysis(url: string, mode: 'summarizer' | 'explainer') {
-		isVideoLoading = true;
-		videoError = '';
-		videoResult = '';
+		// Get the appropriate state object
+		const state = mode === 'summarizer' ? summarizerState : explainerState;
+
+		state.isLoading = true;
+		state.error = '';
+		state.result = '';
 
 		try {
 			const result = mode === 'summarizer' ? await summarizeVideo(url) : await explainVideo(url);
 
 			if (result.success && result.data) {
-				videoResult =
+				state.result =
 					mode === 'summarizer'
 						? (result.data as { summary: string }).summary
 						: (result.data as { explanation: string }).explanation;
 			} else {
-				videoError = result.error || 'Failed to analyze video';
+				state.error = result.error || 'Failed to analyze video';
 			}
 		} catch (error) {
-			videoError = 'An unexpected error occurred while analyzing the video';
+			state.error = 'An unexpected error occurred while analyzing the video';
 		} finally {
-			isVideoLoading = false;
+			state.isLoading = false;
+		}
+
+		// Trigger reactivity by reassigning the state objects
+		if (mode === 'summarizer') {
+			summarizerState = { ...summarizerState };
+		} else {
+			explainerState = { ...explainerState };
 		}
 	}
 </script>
@@ -206,17 +219,17 @@
 			<VideoAnalysisView
 				mode="summarizer"
 				onAnalyze={handleVideoAnalysis}
-				isLoading={isVideoLoading}
-				result={videoResult}
-				error={videoError}
+				isLoading={summarizerState.isLoading}
+				result={summarizerState.result}
+				error={summarizerState.error}
 			/>
 		{:else if activeView === 'explainer'}
 			<VideoAnalysisView
 				mode="explainer"
 				onAnalyze={handleVideoAnalysis}
-				isLoading={isVideoLoading}
-				result={videoResult}
-				error={videoError}
+				isLoading={explainerState.isLoading}
+				result={explainerState.result}
+				error={explainerState.error}
 			/>
 		{/if}
 	</div>

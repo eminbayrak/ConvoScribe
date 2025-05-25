@@ -133,6 +133,37 @@
 				</div>
 			{/if}
 
+			<!-- Video Preview -->
+			{#if videoId && thumbnailUrl}
+				<div class="mb-6">
+					<div class="bg-theme-secondary border border-theme-primary rounded-lg p-4">
+						<h3 class="text-sm font-medium text-theme-primary mb-3">Video Preview</h3>
+						<div class="relative inline-block">
+							<img
+								src={thumbnailUrl}
+								alt="YouTube video thumbnail"
+								class="w-64 h-36 object-cover rounded-lg border border-theme-primary"
+								on:error={() => {
+									// Fallback to default thumbnail if maxresdefault fails
+									if (thumbnailUrl?.includes('maxresdefault')) {
+										thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+									}
+								}}
+							/>
+							<div class="absolute inset-0 flex items-center justify-center">
+								<div
+									class="w-12 h-12 bg-black bg-opacity-70 rounded-full flex items-center justify-center"
+								>
+									<svg class="w-6 h-6 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+										<path d="M8 5v14l11-7z" />
+									</svg>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			{/if}
+
 			<!-- Results -->
 			{#if result && !isLoading}
 				<div class="bg-theme-secondary border border-theme-primary rounded-lg p-6">
