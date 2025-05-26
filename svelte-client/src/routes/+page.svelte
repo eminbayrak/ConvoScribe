@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { tick } from 'svelte';
 	import Sidebar from '$lib/components/Sidebar.svelte';
 	import ModernChatView from '$lib/components/ModernChatView.svelte';
 	import VideoAnalysisView from '$lib/components/VideoAnalysisView.svelte';
@@ -18,8 +19,7 @@
 		images?: string[];
 		isTyping?: boolean;
 	}> = [];
-	let isChatLoading = false;
-	// Video analysis state - separate for each mode
+	let isChatLoading = false; // Video analysis state - separate for each mode
 	let summarizerState = {
 		isLoading: false,
 		result: '',
@@ -30,14 +30,17 @@
 		result: '',
 		error: ''
 	};
+
+	// Separate variables for typewriter effect
+	let summarizerDisplay = '';
+	let explainerDisplay = '';
+	let summarizerTypewriting = false;
+	let explainerTypewriting = false;
 	function handleViewChange(view: 'chat' | 'summarizer' | 'explainer') {
-		console.log('handleViewChange called with:', view);
 		activeView = view;
 		// No need to clear errors when switching views since each view has its own state
 	}
-
 	function handleNewChat() {
-		console.log('handleNewChat called');
 		const newChatId = `chat-${Date.now()}`;
 		const newSession = {
 			id: newChatId,
@@ -59,8 +62,6 @@
 		activeView = 'chat';
 	}
 	async function handleSendMessage(message: string, images?: string[]) {
-		console.log('handleSendMessage called with:', { message, images: images?.length || 0 });
-
 		// Add user message
 		const userMessageId = `user-${Date.now()}`;
 		chatMessages = [
@@ -73,8 +74,6 @@
 				images: images
 			}
 		];
-
-		console.log('Added user message, current chatMessages length:', chatMessages.length);
 
 		// Update chat title with first message
 		if (chatMessages.length === 1) {
@@ -90,7 +89,6 @@
 		}
 
 		isChatLoading = true;
-
 		// Create a bot message for typing effect
 		const botMessageId = `bot-${Date.now()}`;
 		chatMessages = [
@@ -104,28 +102,19 @@
 			}
 		];
 
-		console.log('Added bot typing message, botMessageId:', botMessageId);
-
 		try {
-			let accumulatedContent = '';
-
-			// Prepare conversation history for context (exclude current typing message)
+			let accumulatedContent = ''; // Prepare conversation history for context (exclude current typing message)
 			const conversationHistory = chatMessages
 				.filter((msg) => !msg.isTyping && msg.content.trim()) // Exclude typing messages and empty content
 				.map((msg) => ({
 					type: msg.type,
 					content: msg.content
-				}));
-
-			console.log('Conversation history length:', conversationHistory.length);
-
-			// Send message with streaming enabled and conversation history
+				})); // Send message with streaming enabled and conversation history
 			const result = await sendChatMessage(
 				message || "I've shared an image with you.",
 				images,
 				(chunk: string) => {
 					// Handle each chunk for typewriter effect
-					console.log('Received chunk:', chunk);
 					accumulatedContent += chunk;
 
 					// Update the typing message content
@@ -135,20 +124,14 @@
 				},
 				conversationHistory // Pass conversation history for context
 			);
-
-			console.log('Chat API result:', result);
-
 			if (result.success && result.data) {
-				console.log('Chat successful, finalizing message with reply:', result.data.reply);
 				// Finalize the message and remove typing indicator
 				chatMessages = chatMessages.map((msg) =>
 					msg.id === botMessageId
 						? { ...msg, content: result.data?.reply || '', isTyping: false }
 						: msg
 				);
-				console.log('Updated chatMessages after success, length:', chatMessages.length);
 			} else {
-				console.log('Chat failed, showing error:', result.error);
 				// Handle error
 				chatMessages = chatMessages.map((msg) =>
 					msg.id === botMessageId
@@ -176,8 +159,6 @@
 		}
 	}
 	async function handleVideoAnalysis(url: string, mode: 'summarizer' | 'explainer') {
-		console.log('handleVideoAnalysis called with:', { url, mode });
-
 		// Update the appropriate state object and trigger reactivity
 		if (mode === 'summarizer') {
 			summarizerState = {
@@ -186,7 +167,6 @@
 				error: '',
 				result: ''
 			};
-			console.log('Updated summarizerState to loading:', summarizerState);
 		} else {
 			explainerState = {
 				...explainerState,
@@ -194,41 +174,69 @@
 				error: '',
 				result: ''
 			};
-			console.log('Updated explainerState to loading:', explainerState);
 		}
-
 		try {
-			console.log('About to call API function...');
 			const result = mode === 'summarizer' ? await summarizeVideo(url) : await explainVideo(url);
-			console.log('API result received:', result);
-
 			if (result.success && result.data) {
-				console.log('API call successful, extracting content...');
 				// Server returns {summary: content} or {explanation: content}
 				const resultText =
 					mode === 'summarizer'
 						? (result.data as { summary: string }).summary
-						: (result.data as { explanation: string }).explanation;
+						: (result.data as { explanation: string }).explanation; // Start typewriter effect
+				if (resultText) {
+					const words = resultText.split(' ');
 
-				console.log('Extracted result text:', resultText);
+					// Set up typewriter state
+					if (mode === 'summarizer') {
+						summarizerTypewriting = true;
+						summarizerDisplay = '';
+						summarizerState = {
+							...summarizerState,
+							isLoading: false, // Set to false so UI shows during typewriter
+							result: resultText // Store full result
+						};
+					} else {
+						explainerTypewriting = true;
+						explainerDisplay = '';
+						explainerState = {
+							...explainerState,
+							isLoading: false, // Set to false so UI shows during typewriter
+							result: resultText // Store full result
+						};
+					}
 
-				if (mode === 'summarizer') {
-					summarizerState = {
-						...summarizerState,
-						result: resultText,
-						isLoading: false
+					// Simple typewriter effect
+					let wordIndex = 0;
+					let currentText = '';
+					const addNextWord = () => {
+						if (wordIndex < words.length) {
+							currentText += (wordIndex > 0 ? ' ' : '') + words[wordIndex];
+
+							// Update display variable
+							if (mode === 'summarizer') {
+								summarizerDisplay = currentText;
+							} else {
+								explainerDisplay = currentText;
+							}
+
+							wordIndex++;
+							setTimeout(addNextWord, 80);
+						} else {
+							// Finished typewriter effect
+							if (mode === 'summarizer') {
+								summarizerTypewriting = false;
+								summarizerDisplay = resultText; // Ensure full text
+							} else {
+								explainerTypewriting = false;
+								explainerDisplay = resultText; // Ensure full text
+							}
+						}
 					};
-					console.log('Updated summarizerState with result:', summarizerState);
-				} else {
-					explainerState = {
-						...explainerState,
-						result: resultText,
-						isLoading: false
-					};
-					console.log('Updated explainerState with result:', explainerState);
+
+					// Start the typewriter effect
+					addNextWord();
 				}
 			} else {
-				console.log('API call failed, handling error...');
 				const errorText = result.error || 'Failed to analyze video';
 				if (mode === 'summarizer') {
 					summarizerState = {
@@ -236,14 +244,12 @@
 						error: errorText,
 						isLoading: false
 					};
-					console.log('Updated summarizerState with error:', summarizerState);
 				} else {
 					explainerState = {
 						...explainerState,
 						error: errorText,
 						isLoading: false
 					};
-					console.log('Updated explainerState with error:', explainerState);
 				}
 			}
 		} catch (error) {
@@ -289,7 +295,7 @@
 				mode="summarizer"
 				onAnalyze={handleVideoAnalysis}
 				isLoading={summarizerState.isLoading}
-				result={summarizerState.result}
+				result={summarizerTypewriting ? summarizerDisplay : summarizerState.result}
 				error={summarizerState.error}
 			/>
 		{:else if activeView === 'explainer'}
@@ -297,7 +303,7 @@
 				mode="explainer"
 				onAnalyze={handleVideoAnalysis}
 				isLoading={explainerState.isLoading}
-				result={explainerState.result}
+				result={explainerTypewriting ? explainerDisplay : explainerState.result}
 				error={explainerState.error}
 			/>
 		{/if}

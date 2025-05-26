@@ -8,7 +8,6 @@
 	export let onSelectChat: (sessionId: string) => void;
 	export let selectedChatId: string | null = null;
 	function handleViewChange(view: 'chat' | 'summarizer' | 'explainer') {
-		console.log('Sidebar handleViewChange called with:', view);
 		onViewChange(view);
 	}
 

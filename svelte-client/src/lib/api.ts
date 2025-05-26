@@ -8,9 +8,6 @@ export interface ApiResponse<T> {
 
 export async function summarizeVideo(url: string): Promise<ApiResponse<{ summary: string; }>> {
     try {
-        console.log('Sending summarize request to:', `${API_BASE}/summarize`);
-        console.log('Request body:', { youtube_url: url });
-
         const response = await fetch(`${API_BASE}/summarize`, {
             method: 'POST',
             headers: {
@@ -19,23 +16,14 @@ export async function summarizeVideo(url: string): Promise<ApiResponse<{ summary
             body: JSON.stringify({ youtube_url: url }),
         });
 
-        console.log('Response status:', response.status);
-        console.log('Response ok:', response.ok);
-
-        const data = await response.json();
-        console.log('Summarize API raw response:', data);
-
-        if (response.ok) {
+        const data = await response.json(); if (response.ok) {
             const result = { success: true, data: { summary: data.summary } };
-            console.log('Returning success result:', result);
             return result;
         } else {
             const errorResult = { success: false, error: data.error || 'Failed to get summary' };
-            console.log('Returning error result:', errorResult);
             return errorResult;
         }
     } catch (error) {
-        console.error('Caught exception in summarizeVideo:', error);
         return {
             success: false,
             error: 'Failed to connect to server. Please make sure the server is running.'
@@ -51,8 +39,8 @@ export async function explainVideo(url: string): Promise<ApiResponse<{ explanati
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({ youtube_url: url }),
-        }); const data = await response.json();
-        console.log('Explain API response:', data);
+        });
+        const data = await response.json();
         if (response.ok) {
             return { success: true, data: { explanation: data.explanation } };
         } else {
@@ -73,10 +61,6 @@ export async function sendChatMessage(
     conversationHistory?: Array<{ type: string; content: string; }>
 ): Promise<ApiResponse<{ reply: string; }>> {
     try {
-        console.log('Sending chat message:', message);
-        console.log('Images provided:', images?.length || 0);
-        console.log('Streaming enabled:', !!onChunk);
-
         const requestBody: {
             message: string;
             images?: string[];
@@ -97,7 +81,6 @@ export async function sendChatMessage(
             requestBody.conversation_history = conversationHistory;
         }
 
-        console.log('Request body:', requestBody);
 
         const response = await fetch(`${API_BASE}/chat`, {
             method: 'POST',
@@ -107,22 +90,16 @@ export async function sendChatMessage(
             body: JSON.stringify(requestBody),
         });
 
-        console.log('Chat response status:', response.status);
-        console.log('Chat response ok:', response.ok);
 
         if (!response.ok) {
             const errorData = await response.json();
-            console.log('Chat error response:', errorData);
             return { success: false, error: errorData.error || 'Failed to get response' };
         }        // Handle streaming response (but server doesn't actually support it yet)
         // For now, always handle as non-streaming and simulate typewriter effect if needed
-        console.log('Handling non-streaming response...');
         const data = await response.json();
-        console.log('Chat API raw response:', data);
 
         if (onChunk && data.reply) {
             // Simulate typewriter effect by breaking the response into chunks
-            console.log('Simulating typewriter effect...');
             const words = data.reply.split(' ');
             let currentText = '';
 
@@ -135,10 +112,8 @@ export async function sendChatMessage(
         }
 
         const result = { success: true, data: { reply: data.reply } };
-        console.log('Returning chat result:', result);
         return result;
     } catch (error) {
-        console.error('Chat API error:', error);
         return {
             success: false,
             error: 'Failed to connect to server. Please make sure the server is running.'
