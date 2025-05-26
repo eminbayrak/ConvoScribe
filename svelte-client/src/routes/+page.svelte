@@ -58,8 +58,9 @@
 		chatMessages = [];
 		activeView = 'chat';
 	}
-
 	async function handleSendMessage(message: string, images?: string[]) {
+		console.log('handleSendMessage called with:', { message, images: images?.length || 0 });
+
 		// Add user message
 		const userMessageId = `user-${Date.now()}`;
 		chatMessages = [
@@ -72,6 +73,8 @@
 				images: images
 			}
 		];
+
+		console.log('Added user message, current chatMessages length:', chatMessages.length);
 
 		// Update chat title with first message
 		if (chatMessages.length === 1) {
@@ -101,6 +104,8 @@
 			}
 		];
 
+		console.log('Added bot typing message, botMessageId:', botMessageId);
+
 		try {
 			let accumulatedContent = '';
 
@@ -112,12 +117,15 @@
 					content: msg.content
 				}));
 
+			console.log('Conversation history length:', conversationHistory.length);
+
 			// Send message with streaming enabled and conversation history
 			const result = await sendChatMessage(
 				message || "I've shared an image with you.",
 				images,
 				(chunk: string) => {
 					// Handle each chunk for typewriter effect
+					console.log('Received chunk:', chunk);
 					accumulatedContent += chunk;
 
 					// Update the typing message content
@@ -128,14 +136,19 @@
 				conversationHistory // Pass conversation history for context
 			);
 
+			console.log('Chat API result:', result);
+
 			if (result.success && result.data) {
+				console.log('Chat successful, finalizing message with reply:', result.data.reply);
 				// Finalize the message and remove typing indicator
 				chatMessages = chatMessages.map((msg) =>
 					msg.id === botMessageId
 						? { ...msg, content: result.data?.reply || '', isTyping: false }
 						: msg
 				);
+				console.log('Updated chatMessages after success, length:', chatMessages.length);
 			} else {
+				console.log('Chat failed, showing error:', result.error);
 				// Handle error
 				chatMessages = chatMessages.map((msg) =>
 					msg.id === botMessageId
@@ -163,6 +176,8 @@
 		}
 	}
 	async function handleVideoAnalysis(url: string, mode: 'summarizer' | 'explainer') {
+		console.log('handleVideoAnalysis called with:', { url, mode });
+
 		// Update the appropriate state object and trigger reactivity
 		if (mode === 'summarizer') {
 			summarizerState = {
@@ -171,6 +186,7 @@
 				error: '',
 				result: ''
 			};
+			console.log('Updated summarizerState to loading:', summarizerState);
 		} else {
 			explainerState = {
 				...explainerState,
@@ -178,16 +194,23 @@
 				error: '',
 				result: ''
 			};
+			console.log('Updated explainerState to loading:', explainerState);
 		}
 
 		try {
+			console.log('About to call API function...');
 			const result = mode === 'summarizer' ? await summarizeVideo(url) : await explainVideo(url);
+			console.log('API result received:', result);
 
 			if (result.success && result.data) {
+				console.log('API call successful, extracting content...');
+				// Server returns {summary: content} or {explanation: content}
 				const resultText =
 					mode === 'summarizer'
 						? (result.data as { summary: string }).summary
 						: (result.data as { explanation: string }).explanation;
+
+				console.log('Extracted result text:', resultText);
 
 				if (mode === 'summarizer') {
 					summarizerState = {
@@ -195,14 +218,17 @@
 						result: resultText,
 						isLoading: false
 					};
+					console.log('Updated summarizerState with result:', summarizerState);
 				} else {
 					explainerState = {
 						...explainerState,
 						result: resultText,
 						isLoading: false
 					};
+					console.log('Updated explainerState with result:', explainerState);
 				}
 			} else {
+				console.log('API call failed, handling error...');
 				const errorText = result.error || 'Failed to analyze video';
 				if (mode === 'summarizer') {
 					summarizerState = {
@@ -210,12 +236,14 @@
 						error: errorText,
 						isLoading: false
 					};
+					console.log('Updated summarizerState with error:', summarizerState);
 				} else {
 					explainerState = {
 						...explainerState,
 						error: errorText,
 						isLoading: false
 					};
+					console.log('Updated explainerState with error:', explainerState);
 				}
 			}
 		} catch (error) {

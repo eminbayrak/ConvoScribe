@@ -304,16 +304,12 @@ def handle_transcript_processing(current_request, is_detailed_explanation):
 
 @app.route('/')
 def serve_index():
-    if app.static_folder:
-        return send_from_directory(app.static_folder, 'index.html')
-    return "Static folder not found", 404
+    return send_from_directory(app.static_folder, 'index.html')
 
 
 @app.route('/<path:path>')
 def serve_static_files(path):
-    if app.static_folder:
-        return send_from_directory(app.static_folder, path)
-    return "Static folder not found", 404
+    return send_from_directory(app.static_folder, path)
 
 
 if __name__ == '__main__':

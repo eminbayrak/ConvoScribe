@@ -59,20 +59,18 @@
 			{errorMessage}
 		</div>
 	{/if}
-
 	<!-- Summary Result -->
 	{#if showSummary && summaryResult}
-		<div class="bg-gray-50 border border-gray-200 rounded-lg p-6">
+		<div class="border border-gray-200 rounded-lg p-6">
 			<h2 class="text-xl font-semibold mb-4 text-gray-800">Summary</h2>
 			<div class="prose max-w-none text-gray-700 whitespace-pre-wrap">
 				{summaryResult}
 			</div>
 		</div>
 	{/if}
-
 	<!-- Explanation Result -->
 	{#if showExplanation && explanationResult}
-		<div class="bg-gray-50 border border-gray-200 rounded-lg p-6 mt-6">
+		<div class="border border-gray-200 rounded-lg p-6 mt-6">
 			<h2 class="text-xl font-semibold mb-4 text-gray-800">Detailed Explanation</h2>
 			<div class="prose max-w-none text-gray-700 whitespace-pre-wrap">
 				{explanationResult}
